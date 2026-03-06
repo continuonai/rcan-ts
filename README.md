@@ -2,11 +2,11 @@
 
 Official TypeScript SDK for the **RCAN v1.2** Robot Communication and Accountability Network protocol.
 
-[![npm version](https://badge.fury.io/js/rcan-ts.svg)](https://www.npmjs.com/package/rcan-ts)
+[![npm version](https://badge.fury.io/js/%40continuonai%2Frcan-ts.svg)](https://www.npmjs.com/package/@continuonai/rcan-ts)
 [![CI](https://github.com/continuonai/rcan-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/continuonai/rcan-ts/actions)
 
 ```
-npm install rcan-ts
+npm install @continuonai/rcan-ts
 ```
 
 ---
@@ -18,7 +18,7 @@ npm install rcan-ts
 Every robot has a globally unique, resolvable address:
 
 ```typescript
-import { RobotURI } from "rcan-ts";
+import { RobotURI } from "@continuonai/rcan-ts";
 
 const uri = RobotURI.build({
   manufacturer: "acme",
@@ -36,7 +36,7 @@ console.log(parsed.namespace); // "acme/robotarm"
 ### Building a Message
 
 ```typescript
-import { RCANMessage, ConfidenceGate } from "rcan-ts";
+import { RCANMessage, ConfidenceGate } from "@continuonai/rcan-ts";
 
 const gate = new ConfidenceGate(0.8);
 const confidence = 0.91; // from your AI model
@@ -56,7 +56,7 @@ if (gate.allows(confidence)) {
 ### Human-in-the-Loop Gate
 
 ```typescript
-import { HiTLGate } from "rcan-ts";
+import { HiTLGate } from "@continuonai/rcan-ts";
 
 const hitl = new HiTLGate();
 const token = hitl.request("stop_emergency", { reason: "obstacle detected" });
@@ -72,7 +72,7 @@ if (hitl.check(token) === "approved") {
 ### Tamper-Evident Audit Chain
 
 ```typescript
-import { AuditChain } from "rcan-ts";
+import { AuditChain } from "@continuonai/rcan-ts";
 
 const chain = new AuditChain("your-hmac-secret");
 
@@ -94,7 +94,7 @@ const jsonl = chain.toJSONL();
 ### Validation
 
 ```typescript
-import { validateMessage, validateConfig, validateURI } from "rcan-ts";
+import { validateMessage, validateConfig, validateURI } from "@continuonai/rcan-ts";
 
 const result = validateMessage({
   rcan: "1.2",
@@ -132,7 +132,7 @@ result.warnings.forEach((w) => console.warn("⚠️", w));
 | Package | Language | Install |
 |---------|----------|---------|
 | [rcan-py](https://github.com/continuonai/rcan-py) | Python 3.10+ | `pip install rcan` |
-| **rcan-ts** (this) | TypeScript / Node | `npm install rcan-ts` |
+| **rcan-ts** (this) | TypeScript / Node | `npm install @continuonai/rcan-ts` |
 | [OpenCastor](https://github.com/craigm26/OpenCastor) | Python (robot runtime) | `curl -sL opencastor.com/install \| bash` |
 
 The Python and TypeScript SDKs share an identical API surface — `RobotURI`, `RCANMessage`, `ConfidenceGate`, `HiTLGate`, `AuditChain`, and `validateConfig` work the same way in both languages.
