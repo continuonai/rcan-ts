@@ -127,12 +127,23 @@ result.warnings.forEach((w) => console.warn("⚠️", w));
 
 ---
 
+## Ecosystem
+
+| Package | Language | Install |
+|---------|----------|---------|
+| [rcan-py](https://github.com/continuonai/rcan-py) | Python 3.10+ | `pip install rcan` |
+| **rcan-ts** (this) | TypeScript / Node | `npm install rcan-ts` |
+| [OpenCastor](https://github.com/craigm26/OpenCastor) | Python (robot runtime) | `curl -sL opencastor.com/install \| bash` |
+
+The Python and TypeScript SDKs share an identical API surface — `RobotURI`, `RCANMessage`, `ConfidenceGate`, `HiTLGate`, `AuditChain`, and `validateConfig` work the same way in both languages.
+
 ## Links
 
+- ⚡ [Quickstart](https://rcan.dev/quickstart) — from zero to first message in 5 min
 - 📖 [RCAN Spec](https://rcan.dev/spec) — full protocol specification
+- 🌐 [rcan.dev](https://rcan.dev) — robot registry and documentation
 - 🐍 [rcan-py](https://github.com/continuonai/rcan-py) — Python SDK
 - 🤖 [OpenCastor](https://github.com/craigm26/OpenCastor) — robot runtime with RCAN built in
-- 🌐 [rcan.dev](https://rcan.dev) — robot registry and documentation
 
 ---
 
