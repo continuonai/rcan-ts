@@ -54,7 +54,7 @@ export interface RCANRegistryNode {
   rcan_node_version: string;
   node_type: "root" | "authoritative" | "resolver" | "cache";
   operator: string;
-  namespace_prefix: string; // "RRN" for root, "RRN-BD" for delegated
+  namespace_prefix: string; // "RRN" for root, "RRN-BD" for delegated; prefix is [A-Z0-9]{2,8}
   public_key: string;       // "ed25519:..."
   api_base: string;
   registry_ui?: string;

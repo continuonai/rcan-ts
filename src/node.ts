@@ -42,9 +42,9 @@ function parseRRNNamespace(
   | { type: "root"; serial: string }
   | { type: "delegated"; prefix: string; serial: string }
   | null {
-  const delegated = rrn.match(/^RRN-([A-Z]{2,6})-(\d{8})$/);
+  const delegated = rrn.match(/^RRN-([A-Z0-9]{2,8})-(\d{8,16})$/);
   if (delegated) return { type: "delegated", prefix: delegated[1], serial: delegated[2] };
-  const root = rrn.match(/^RRN-(\d{8})$/);
+  const root = rrn.match(/^RRN-(\d{8,16})$/);
   if (root) return { type: "root", serial: root[1] };
   return null;
 }

@@ -282,6 +282,50 @@ describe("NodeClient.discover()", () => {
     const url = (globalThis.fetch as jest.Mock).mock.calls[0][0] as string;
     expect(url).toContain("prefix=ABCDEF");
   });
+
+  // ── RRN address space expansion (8-16 digits, A-Z0-9 prefix) ───────────────
+
+  it("accepts root RRN with 12 digits (expanded address space)", async () => {
+    mockFetch(ROOT_MANIFEST);
+    const client = new NodeClient("https://rcan.dev");
+    const node = await client.discover("RRN-000000000001");
+    expect(node.node_type).toBe("root");
+  });
+
+  it("accepts delegated RRN with 12-digit serial", async () => {
+    mockFetch([BD_MANIFEST]);
+    const client = new NodeClient("https://rcan.dev");
+    const node = await client.discover("RRN-BD-000000000001");
+    expect(node.namespace_prefix).toBe("RRN-BD");
+    const url = (globalThis.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain("prefix=BD");
+  });
+
+  it("accepts alphanumeric prefix (RRN-BD1-...)", async () => {
+    mockFetch([{ ...BD_MANIFEST, namespace_prefix: "RRN-BD1" }]);
+    const client = new NodeClient("https://rcan.dev");
+    const node = await client.discover("RRN-BD1-000000000001");
+    expect(node.namespace_prefix).toBe("RRN-BD1");
+  });
+
+  it("still accepts old 8-digit root RRN (backward compat)", async () => {
+    mockFetch(ROOT_MANIFEST);
+    const client = new NodeClient("https://rcan.dev");
+    const node = await client.discover("RRN-12345678");
+    expect(node.node_type).toBe("root");
+  });
+
+  it("still accepts old 8-digit delegated RRN (backward compat)", async () => {
+    mockFetch([BD_MANIFEST]);
+    const client = new NodeClient("https://rcan.dev");
+    const node = await client.discover("RRN-BD-12345678");
+    expect(node.namespace_prefix).toBe("RRN-BD");
+  });
+
+  it("rejects delegated RRN with 7-digit serial (too short)", async () => {
+    const client = new NodeClient("https://rcan.dev");
+    await expect(client.discover("RRN-BD-1234567")).rejects.toThrow(RCANNodeNotFoundError);
+  });
 });
 
 // ── resolve() ─────────────────────────────────────────────────────────────────
@@ -361,15 +405,17 @@ describe("parseRRNNamespace edge cases (via discover)", () => {
     await expect(client.discover("RRN-B-00000001")).rejects.toThrow(RCANNodeNotFoundError);
   });
 
-  it("rejects prefix longer than 6 chars", async () => {
+  it("rejects prefix longer than 8 chars", async () => {
     const client = new NodeClient("https://rcan.dev");
-    await expect(client.discover("RRN-ABCDEFG-00000001")).rejects.toThrow(RCANNodeNotFoundError);
+    await expect(client.discover("RRN-ABCDEFGHI-00000001")).rejects.toThrow(RCANNodeNotFoundError);
   });
 
   it("rejects serial with wrong digit count", async () => {
     const client = new NodeClient("https://rcan.dev");
+    // 7 digits — too short (min is 8)
     await expect(client.discover("RRN-1234567")).rejects.toThrow(RCANNodeNotFoundError);
-    await expect(client.discover("RRN-123456789")).rejects.toThrow(RCANNodeNotFoundError);
+    // 17 digits — too long (max is 16)
+    await expect(client.discover("RRN-12345678901234567")).rejects.toThrow(RCANNodeNotFoundError);
   });
 
   it("accepts root RRN with exactly 8 digits", async () => {
