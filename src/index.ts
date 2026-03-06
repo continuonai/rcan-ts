@@ -25,5 +25,14 @@ export type {
 export { validateURI, validateMessage, validateConfig } from "./validate.js";
 export type { ValidationResult, RCANConfig } from "./validate.js";
 
+export {
+  RCANError,
+  RCANAddressError,
+  RCANValidationError,
+  RCANGateError,
+  RCANSignatureError,
+  RCANRegistryError,
+} from "./errors.js";
+
 export const VERSION = "0.1.0";
 export const RCAN_VERSION = "1.2";
