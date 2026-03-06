@@ -41,4 +41,22 @@ export default defineConfig([
       };
     },
   },
+  // IIFE/CDN bundle — for unpkg / jsDelivr
+  {
+    entry: { "rcan": "src/index.ts" },
+    format: ["iife"],
+    globalName: "RCAN",
+    outDir: "dist",
+    outExtension: () => ({ js: ".iife.js" }),
+    minify: true,
+    sourcemap: false,
+    platform: "browser",
+    esbuildOptions(opts) {
+      opts.define = {
+        ...opts.define,
+        "process.versions": "{}",
+        "process.versions.node": "undefined",
+      };
+    },
+  },
 ]);

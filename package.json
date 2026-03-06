@@ -1,6 +1,6 @@
 {
   "name": "@continuonai/rcan-ts",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Official TypeScript SDK for the RCAN v1.2 robot communication protocol",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -51,6 +51,9 @@
     }
   },
   "browser": "dist/browser.mjs",
+  "cdn": "./dist/rcan.iife.js",
+  "unpkg": "./dist/rcan.iife.js",
+  "jsdelivr": "./dist/rcan.iife.js",
   "bin": {
     "rcan-validate": "./dist/rcan-validate.js"
   },

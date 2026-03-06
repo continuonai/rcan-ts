@@ -9,6 +9,21 @@ Official TypeScript SDK for the **RCAN v1.2** Robot Communication and Accountabi
 npm install @continuonai/rcan-ts
 ```
 
+### CDN / Browser (no build step)
+
+```html
+<script src="https://unpkg.com/@continuonai/rcan-ts/dist/rcan.iife.js"></script>
+<script>
+  const uri = new RCAN.RobotURI.parse('rcan://registry.rcan.dev/acme/arm/v1/unit-001');
+  console.log(uri.manufacturer); // acme
+</script>
+```
+
+Also available via jsDelivr:
+```html
+<script src="https://cdn.jsdelivr.net/npm/@continuonai/rcan-ts/dist/rcan.iife.js"></script>
+```
+
 ---
 
 ## Quick Start
