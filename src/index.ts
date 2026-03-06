@@ -52,5 +52,5 @@ export type { RCANRegistryNode, RCANResolveResult } from "./types.js";
 
 export { fetchCanonicalSchema, validateConfigAgainstSchema, validateNodeAgainstSchema } from "./schema.js";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.2.0";
 export const RCAN_VERSION = "1.2";

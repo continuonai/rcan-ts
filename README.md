@@ -9,6 +9,8 @@ Official TypeScript SDK for the **RCAN v1.2** Robot Communication and Accountabi
 npm install @continuonai/rcan-ts
 ```
 
+> **v0.2.0** — RCAN v1.2 spec compliance including §17 Distributed Registry Node Protocol
+
 ### CDN / Browser (no build step)
 
 ```html
@@ -139,6 +141,62 @@ result.warnings.forEach((w) => console.warn("⚠️", w));
 | `validateURI` | Validate a Robot URI string |
 | `validateMessage` | Validate a RCAN message object |
 | `validateConfig` | L1/L2/L3 conformance check for a robot RCAN config |
+| `NodeClient` | Resolve RRNs from federated registry nodes (§17) |
+| `fetchCanonicalSchema` | Fetch the canonical JSON schema from rcan.dev |
+| `validateConfigAgainstSchema` | Validate a config object against the live JSON schema |
+| `validateNodeAgainstSchema` | Validate a node manifest against the node schema |
+
+---
+
+## Distributed Registry (NodeClient)
+
+RCAN v1.2 §17 introduces a federated registry network. `NodeClient` resolves RRNs from any node — root or delegated authoritative.
+
+```typescript
+import { NodeClient } from "@continuonai/rcan-ts";
+
+const client = new NodeClient();
+
+// Discover which node is authoritative for an RRN
+const node = await client.discover("RRN-BD-00000001");
+console.log(node.node_type);  // "authoritative"
+console.log(node.operator);   // "Boston Dynamics, Inc."
+
+// Resolve a full robot record
+const robot = await client.resolve("RRN-BD-00000001");
+console.log(robot.robot_name);  // "Atlas Unit 001"
+
+// Custom root
+const client2 = new NodeClient({ rootUrl: "https://rcan.dev" });
+```
+
+**RRN Formats:**
+
+| Format | Example | Notes |
+|--------|---------|-------|
+| Root (legacy) | `RRN-00000042` | 8-digit; still valid |
+| Root (recommended) | `RRN-000000000042` | 12-digit for new registrations |
+| Delegated | `RRN-BD-00000001` | Namespace prefix + sequence |
+
+## Schema Validation
+
+Validate configs against the canonical JSON schema published at rcan.dev:
+
+```typescript
+import { validateConfigAgainstSchema, validateNodeAgainstSchema, fetchCanonicalSchema } from "@continuonai/rcan-ts";
+
+// Validate a config object against the live schema
+const result = await validateConfigAgainstSchema(myConfig);
+if (!result.ok) {
+  result.issues.forEach(i => console.error("❌", i));
+}
+
+// Validate a node manifest
+const nodeResult = await validateNodeAgainstSchema(myNodeManifest);
+
+// Fetch the raw schema (e.g., for editor integration)
+const schema = await fetchCanonicalSchema("rcan-config");
+```
 
 ---
 
