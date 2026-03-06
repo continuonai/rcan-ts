@@ -148,54 +148,81 @@ result.warnings.forEach((w) => console.warn("⚠️", w));
 
 ---
 
-## Distributed Registry (NodeClient)
+## Distributed Registry Nodes (§17)
 
 RCAN v1.2 §17 introduces a federated registry network. `NodeClient` resolves RRNs from any node — root or delegated authoritative.
 
 ```typescript
-import { NodeClient } from "@continuonai/rcan-ts";
+import { NodeClient } from '@continuonai/rcan-ts';
 
 const client = new NodeClient();
 
-// Discover which node is authoritative for an RRN
-const node = await client.discover("RRN-BD-00000001");
-console.log(node.node_type);  // "authoritative"
-console.log(node.operator);   // "Boston Dynamics, Inc."
+// Resolve an RRN across the federation
+const result = await client.resolve('RRN-BD-000000000001');
+console.log(`Resolved by: ${result.resolved_by}`);
+console.log(`Robot: ${result.record.name}`);
 
-// Resolve a full robot record
-const robot = await client.resolve("RRN-BD-00000001");
-console.log(robot.robot_name);  // "Atlas Unit 001"
+// Discover the authoritative node for a namespace
+const node = await client.discover('RRN-BD-000000000001');
+console.log(`Authoritative: ${node.operator} at ${node.api_base}`);
 
-// Custom root
-const client2 = new NodeClient({ rootUrl: "https://rcan.dev" });
+// List all known registry nodes
+const nodes = await client.listNodes();
+nodes.forEach(n => console.log(`${n.operator}: ${n.namespace_prefix}`));
+
+// Verify a node manifest
+const manifest = await client.getNodeManifest('https://registry.example.com');
+const isValid = client.verifyNode(manifest);
+
+// Error handling
+import { RCANNodeNotFoundError, RCANNodeTrustError } from '@continuonai/rcan-ts';
+try {
+  const result = await client.resolve('RRN-UNKNOWN-000000000001');
+} catch (e) {
+  if (e instanceof RCANNodeNotFoundError) {
+    console.log(`Not found: ${e.rrn}`);
+  } else if (e instanceof RCANNodeTrustError) {
+    console.log(`Trust failure: ${e.reason}`);
+  }
+}
 ```
 
-**RRN Formats:**
+### RRN Format
 
-| Format | Example | Notes |
-|--------|---------|-------|
-| Root (legacy) | `RRN-00000042` | 8-digit; still valid |
-| Root (recommended) | `RRN-000000000042` | 12-digit for new registrations |
-| Delegated | `RRN-BD-00000001` | Namespace prefix + sequence |
+```
+Root namespace:    RRN-000000000001    (12-digit recommended, 8-digit still valid)
+Delegated:        RRN-BD-000000000001  (prefix 2-8 alphanumeric chars)
+Legacy (valid):   RRN-00000001         (8-digit, backward compatible)
+```
 
 ## Schema Validation
 
 Validate configs against the canonical JSON schema published at rcan.dev:
 
 ```typescript
-import { validateConfigAgainstSchema, validateNodeAgainstSchema, fetchCanonicalSchema } from "@continuonai/rcan-ts";
+import { validateConfigAgainstSchema, validateNodeAgainstSchema } from '@continuonai/rcan-ts';
 
-// Validate a config object against the live schema
+// Validate a RCAN config against the canonical schema from rcan.dev
 const result = await validateConfigAgainstSchema(myConfig);
-if (!result.ok) {
-  result.issues.forEach(i => console.error("❌", i));
+if (!result.valid) {
+  console.error('Config invalid:', result.errors);
+} else if (result.skipped) {
+  console.warn('Schema validation skipped (rcan.dev unreachable)');
 }
 
 // Validate a node manifest
-const nodeResult = await validateNodeAgainstSchema(myNodeManifest);
+const nodeResult = await validateNodeAgainstSchema(manifest);
+```
 
-// Fetch the raw schema (e.g., for editor integration)
-const schema = await fetchCanonicalSchema("rcan-config");
+### CDN / Browser Usage
+
+```html
+<script src="https://unpkg.com/@continuonai/rcan-ts/dist/rcan.iife.js"></script>
+<script>
+  const { validateConfig, NodeClient } = window.RCAN;
+  const client = new NodeClient();
+  client.resolve('RRN-000000000001').then(r => console.log(r));
+</script>
 ```
 
 ---

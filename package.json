@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "postbuild": "chmod +x dist/rcan-validate.js",
+    "postbuild": "chmod +x bin/rcan-validate.mjs",
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
@@ -55,7 +55,7 @@
   "unpkg": "./dist/rcan.iife.js",
   "jsdelivr": "./dist/rcan.iife.js",
   "bin": {
-    "rcan-validate": "./dist/rcan-validate.js"
+    "rcan-validate": "./bin/rcan-validate.mjs"
   },
   "files": [
     "dist",
