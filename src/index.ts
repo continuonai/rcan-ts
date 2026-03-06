@@ -34,5 +34,13 @@ export {
   RCANRegistryError,
 } from "./errors.js";
 
+export { RegistryClient } from "./registry.js";
+export type {
+  RobotRegistration,
+  Robot,
+  RegistrationResult,
+  ListResult,
+} from "./registry.js";
+
 export const VERSION = "0.1.0";
 export const RCAN_VERSION = "1.2";
