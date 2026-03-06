@@ -33,6 +33,10 @@ export {
   RCANGateError,
   RCANSignatureError,
   RCANRegistryError,
+  RCANNodeError,
+  RCANNodeNotFoundError,
+  RCANNodeSyncError,
+  RCANNodeTrustError,
 } from "./errors.js";
 
 export { RegistryClient } from "./registry.js";
@@ -42,6 +46,9 @@ export type {
   RegistrationResult,
   ListResult,
 } from "./registry.js";
+
+export { NodeClient } from "./node.js";
+export type { RCANRegistryNode, RCANResolveResult } from "./types.js";
 
 export const VERSION = "0.1.0";
 export const RCAN_VERSION = "1.2";

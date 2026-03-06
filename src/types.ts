@@ -47,3 +47,32 @@ export interface RCANMessageEnvelope {
   signature?: string;
   [key: string]: unknown;
 }
+
+// ── Registry Node / Federation types ─────────────────────────────────────────
+
+export interface RCANRegistryNode {
+  rcan_node_version: string;
+  node_type: "root" | "authoritative" | "resolver" | "cache";
+  operator: string;
+  namespace_prefix: string; // "RRN" for root, "RRN-BD" for delegated
+  public_key: string;       // "ed25519:..."
+  api_base: string;
+  registry_ui?: string;
+  spec_version?: string;
+  capabilities?: string[];
+  sync_endpoint?: string;
+  last_sync?: string;
+  ttl_seconds?: number;
+  contact?: string;
+  governance?: string;
+  federation_protocol?: string;
+}
+
+export interface RCANResolveResult {
+  rrn: string;
+  resolved_by: string;
+  namespace: string;
+  record: Record<string, unknown>;
+  cache_status: "HIT" | "MISS" | "STALE";
+  resolved_at: string;
+}

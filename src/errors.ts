@@ -56,3 +56,44 @@ export class RCANRegistryError extends RCANError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+// ── Node / Federation errors ──────────────────────────────────────────────────
+
+export class RCANNodeError extends RCANError {
+  constructor(message: string, public readonly nodeUrl?: string) {
+    super(message);
+    this.name = "RCANNodeError";
+    Object.setPrototypeOf(this, RCANNodeError.prototype);
+  }
+}
+
+export class RCANNodeNotFoundError extends RCANNodeError {
+  constructor(public readonly rrn: string, nodeUrl?: string) {
+    super(`RRN not found in federation: ${rrn}`, nodeUrl);
+    this.name = "RCANNodeNotFoundError";
+    Object.setPrototypeOf(this, RCANNodeNotFoundError.prototype);
+  }
+}
+
+export class RCANNodeSyncError extends RCANNodeError {
+  constructor(
+    message: string,
+    nodeUrl?: string,
+    public readonly cause?: Error
+  ) {
+    super(message, nodeUrl);
+    this.name = "RCANNodeSyncError";
+    Object.setPrototypeOf(this, RCANNodeSyncError.prototype);
+  }
+}
+
+export class RCANNodeTrustError extends RCANNodeError {
+  public readonly reason: "invalid_signature" | "expired_cert" | "unknown_issuer" | "missing_pubkey";
+
+  constructor(reason: RCANNodeTrustError["reason"], nodeUrl?: string) {
+    super(`Node trust verification failed: ${reason}`, nodeUrl);
+    this.name = "RCANNodeTrustError";
+    this.reason = reason;
+    Object.setPrototypeOf(this, RCANNodeTrustError.prototype);
+  }
+}
