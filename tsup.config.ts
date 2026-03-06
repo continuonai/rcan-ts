@@ -21,7 +21,7 @@ export default defineConfig([
     outDir: "dist",
     platform: "node",
     target: "node18",
-    banner: { js: "#!/usr/bin/env node" },
+    noExternal: [],
   },
   // Browser / Edge (ESM, Web Crypto)
   {

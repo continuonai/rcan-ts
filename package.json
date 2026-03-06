@@ -15,6 +15,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "postbuild": "chmod +x dist/rcan-validate.js",
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
@@ -51,7 +52,7 @@
   },
   "browser": "dist/browser.mjs",
   "bin": {
-    "rcan-validate": "./dist/rcan-validate.cjs"
+    "rcan-validate": "./dist/rcan-validate.js"
   },
   "files": [
     "dist",
