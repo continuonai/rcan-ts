@@ -96,7 +96,7 @@ describe("rcan-validate config (validateConfig)", () => {
   test("L3-conformant config has no failures", () => {
     const config = {
       rcan_version: "1.2",
-      metadata: { manufacturer: "acme", model: "arm", version: "v2", rrn: "RRN-00000001" },
+      metadata: { manufacturer: "acme", model: "arm", version: "v2", device_id: "unit-001", rrn: "RRN-00000001" },
       agent: {
         provider: "anthropic",
         model: "claude-3-5-sonnet-20241022",

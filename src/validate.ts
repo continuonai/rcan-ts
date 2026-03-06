@@ -6,6 +6,9 @@
 
 import { RobotURI, RobotURIError } from "./address";
 import { RCANMessage, RCANMessageError } from "./message";
+import type { RCANConfig as RCANConfigType } from "./types";
+
+export type { RCANConfig } from "./types";
 
 export interface ValidationResult {
   ok: boolean;
@@ -108,39 +111,33 @@ export function validateMessage(data: unknown): ValidationResult {
 // Config validation (L1 / L2 / L3)
 // ---------------------------------------------------------------------------
 
-export interface RCANConfig {
-  rcan_version?: string;
-  metadata?: {
-    manufacturer?: string;
-    model?: string;
-    version?: string;
-    rrn?: string;
-    rcan_uri?: string;
-  };
-  agent?: {
-    provider?: string;
-    model?: string;
-    confidence_gates?: Array<{ threshold?: number }>;
-    hitl_gates?: Array<Record<string, unknown>>;
-    commitment_chain?: { enabled?: boolean };
-    signing?: { enabled?: boolean };
-  };
-  rcan_protocol?: {
-    jwt_auth?: { enabled?: boolean };
-  };
-  [key: string]: unknown;
-}
-
-export function validateConfig(config: RCANConfig): ValidationResult {
+export function validateConfig(config: RCANConfigType): ValidationResult {
   const result = makeResult();
   const meta = config.metadata ?? {};
   const agent = config.agent ?? {};
   const rcanProto = config.rcan_protocol ?? {};
 
+  // Required top-level keys
+  for (const key of ["rcan_version", "metadata", "agent"] as const) {
+    if (!(key in config) || config[key] === undefined || config[key] === null) {
+      fail(result, `Missing required key: '${key}'`);
+    }
+  }
+
+  // rcan_version format
+  const rv = config.rcan_version;
+  if (rv) {
+    if (!/^\d+\.\d+$/.test(rv)) {
+      fail(result, `rcan_version '${rv}' must match pattern N.N (e.g. '1.2')`);
+    }
+  }
+
   // L1 — required fields
   if (!meta.manufacturer) fail(result, "L1: metadata.manufacturer is required (§2)");
   if (!meta.model) fail(result, "L1: metadata.model is required (§2)");
-  if (!config.rcan_version) warn(result, "L1: rcan_version not declared (recommended)");
+  if (!meta.device_id && !meta.robot_name) {
+    fail(result, "L1: metadata.device_id (or robot_name) is required (§2)");
+  }
 
   // L2 — auth + confidence
   if (!rcanProto.jwt_auth?.enabled) {

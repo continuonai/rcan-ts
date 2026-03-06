@@ -24,6 +24,7 @@ export type {
 
 export { validateURI, validateMessage, validateConfig } from "./validate.js";
 export type { ValidationResult, RCANConfig } from "./validate.js";
+export type { RCANMetadata, RCANAgentConfig, RCANMessageEnvelope } from "./types.js";
 
 export {
   RCANError,

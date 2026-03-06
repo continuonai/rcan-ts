@@ -84,7 +84,7 @@ describe("validateMessage()", () => {
 describe("validateConfig()", () => {
   const VALID_CFG = {
     rcan_version: "1.2",
-    metadata: { manufacturer: "acme", model: "arm", rrn: "RRN-00000042" },
+    metadata: { manufacturer: "acme", model: "arm", device_id: "unit-001", rrn: "RRN-00000042" },
     agent: {
       confidence_gates: [{ threshold: 0.8 }],
       hitl_gates: [{}],
@@ -106,7 +106,7 @@ describe("validateConfig()", () => {
   });
 
   test("missing model fails L1", () => {
-    const cfg = { ...VALID_CFG, metadata: { manufacturer: "acme" } };
+    const cfg = { ...VALID_CFG, metadata: { manufacturer: "acme", device_id: "unit-001" } };
     const r = validateConfig(cfg);
     expect(r.ok).toBe(false);
   });
@@ -123,7 +123,7 @@ describe("validateConfig()", () => {
   });
 
   test("no rrn warns about registration", () => {
-    const cfg = { ...VALID_CFG, metadata: { manufacturer: "acme", model: "arm" } };
+    const cfg = { ...VALID_CFG, metadata: { manufacturer: "acme", model: "arm", device_id: "unit-001" } };
     const r = validateConfig(cfg);
     expect(r.warnings.some((w) => w.toLowerCase().includes("register"))).toBe(true);
   });
