@@ -1,3 +1,17 @@
+## [0.3.0] — 2026-03-06
+
+### Added
+- `SPEC_VERSION = '1.2'` constant exported from package
+- `bin/rcan-validate.mjs` — CLI: `rcan-validate node <url>`, `rcan-validate --version`
+- `src/schema.ts` — `fetchCanonicalSchema()`, `validateConfigAgainstSchema()`, `validateNodeAgainstSchema()` with in-memory cache and graceful degradation
+- `RCANRegistryNode`, `RCANResolveResult` TypeScript interfaces
+- `NodeClient` — federated RRN resolution: `discover()`, `resolve()`, `listNodes()`, `verifyNode()`
+- `RCANNodeError`, `RCANNodeNotFoundError`, `RCANNodeSyncError`, `RCANNodeTrustError`
+- RRN regex expanded: sequences 8→8-16 digits, prefix `[A-Z0-9]{2,8}` (backward compatible)
+
+### Fixed
+- Package install command in README corrected to `@continuonai/rcan-ts`
+
 # Changelog
 
 All notable changes to @continuonai/rcan-ts are documented here.
