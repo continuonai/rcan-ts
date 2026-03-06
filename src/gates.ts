@@ -2,7 +2,7 @@
  * RCAN Safety Gates — confidence and human-in-the-loop gating (§16).
  */
 
-import { randomUUID } from "crypto";
+import { generateUUID } from "./crypto.js";
 
 export class GateError extends Error {
   constructor(message: string) {
@@ -69,7 +69,7 @@ export class HiTLGate {
    * Returns an approval token to poll or pass to approve/deny.
    */
   request(action: string, context: Record<string, unknown> = {}): string {
-    const token = randomUUID();
+    const token = generateUUID();
     this._pending.set(token, {
       token,
       action,

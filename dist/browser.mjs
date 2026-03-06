@@ -1,0 +1,711 @@
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
+  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
+}) : x)(function(x) {
+  if (typeof require !== "undefined") return require.apply(this, arguments);
+  throw Error('Dynamic require of "' + x + '" is not supported');
+});
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+// src/address.ts
+var RobotURIError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RobotURIError";
+  }
+};
+var RobotURI = class _RobotURI {
+  constructor(opts) {
+    __publicField(this, "registry");
+    __publicField(this, "manufacturer");
+    __publicField(this, "model");
+    __publicField(this, "version");
+    __publicField(this, "deviceId");
+    this.registry = opts.registry;
+    this.manufacturer = opts.manufacturer;
+    this.model = opts.model;
+    this.version = opts.version;
+    this.deviceId = opts.deviceId;
+  }
+  /** Parse a RCAN URI string. Throws RobotURIError on invalid input. */
+  static parse(uri) {
+    if (!uri.startsWith("rcan://")) {
+      throw new RobotURIError(`URI must start with 'rcan://' \u2014 got: ${uri}`);
+    }
+    const withoutScheme = uri.slice("rcan://".length);
+    const parts = withoutScheme.split("/");
+    if (parts.length !== 5) {
+      throw new RobotURIError(
+        `URI must have exactly 5 path segments (registry/manufacturer/model/version/device-id) \u2014 got ${parts.length} in: ${uri}`
+      );
+    }
+    const [registry, manufacturer, model, version, deviceId] = parts;
+    for (const [name, value] of [
+      ["registry", registry],
+      ["manufacturer", manufacturer],
+      ["model", model],
+      ["version", version],
+      ["device-id", deviceId]
+    ]) {
+      if (!value || value.trim() === "") {
+        throw new RobotURIError(`URI segment '${name}' must not be empty`);
+      }
+    }
+    return new _RobotURI({ registry, manufacturer, model, version, deviceId });
+  }
+  /** Build a RCAN URI from components. */
+  static build(opts) {
+    const registry = opts.registry ?? "registry.rcan.dev";
+    const { manufacturer, model, version, deviceId } = opts;
+    for (const [name, value] of [
+      ["manufacturer", manufacturer],
+      ["model", model],
+      ["version", version],
+      ["deviceId", deviceId]
+    ]) {
+      if (!value || value.trim() === "") {
+        throw new RobotURIError(`'${name}' must not be empty`);
+      }
+    }
+    return new _RobotURI({ registry, manufacturer, model, version, deviceId });
+  }
+  /** Full URI string: rcan://registry/manufacturer/model/version/device-id */
+  toString() {
+    return `rcan://${this.registry}/${this.manufacturer}/${this.model}/${this.version}/${this.deviceId}`;
+  }
+  /** Short namespace: manufacturer/model */
+  get namespace() {
+    return `${this.manufacturer}/${this.model}`;
+  }
+  /** HTTPS registry URL for this robot */
+  get registryUrl() {
+    return `https://${this.registry}/registry/${this.manufacturer}/${this.model}/${this.version}/${this.deviceId}`;
+  }
+  /** Check if two URIs refer to the same robot */
+  equals(other) {
+    return this.toString() === other.toString();
+  }
+  toJSON() {
+    return {
+      uri: this.toString(),
+      registry: this.registry,
+      manufacturer: this.manufacturer,
+      model: this.model,
+      version: this.version,
+      deviceId: this.deviceId
+    };
+  }
+};
+
+// src/message.ts
+var RCANMessageError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RCANMessageError";
+  }
+};
+var RCANMessage = class _RCANMessage {
+  constructor(data) {
+    __publicField(this, "rcan");
+    __publicField(this, "cmd");
+    __publicField(this, "target");
+    __publicField(this, "params");
+    __publicField(this, "confidence");
+    __publicField(this, "modelIdentity");
+    __publicField(this, "signature");
+    __publicField(this, "timestamp");
+    if (!data.cmd || data.cmd.trim() === "") {
+      throw new RCANMessageError("'cmd' is required");
+    }
+    if (!data.target) {
+      throw new RCANMessageError("'target' is required");
+    }
+    this.rcan = data.rcan ?? "1.2";
+    this.cmd = data.cmd;
+    this.target = data.target instanceof RobotURI ? data.target.toString() : String(data.target);
+    this.params = data.params ?? {};
+    this.confidence = data.confidence;
+    this.modelIdentity = data.modelIdentity ?? data.model_identity;
+    this.signature = data.signature;
+    this.timestamp = data.timestamp ?? (/* @__PURE__ */ new Date()).toISOString();
+    if (this.confidence !== void 0) {
+      if (this.confidence < 0 || this.confidence > 1) {
+        throw new RCANMessageError(
+          `confidence must be in [0.0, 1.0] \u2014 got ${this.confidence}`
+        );
+      }
+    }
+  }
+  /** Whether this message has a signature block */
+  get isSigned() {
+    return this.signature !== void 0 && this.signature.sig !== "";
+  }
+  /** Whether this message was generated by an AI model (has confidence score) */
+  get isAiDriven() {
+    return this.confidence !== void 0;
+  }
+  /** Serialize to a plain object */
+  toJSON() {
+    const obj = {
+      rcan: this.rcan,
+      cmd: this.cmd,
+      target: this.target,
+      timestamp: this.timestamp
+    };
+    if (Object.keys(this.params).length > 0) obj.params = this.params;
+    if (this.confidence !== void 0) obj.confidence = this.confidence;
+    if (this.modelIdentity) obj.model_identity = this.modelIdentity;
+    if (this.signature) obj.signature = this.signature;
+    return obj;
+  }
+  /** Serialize to JSON string */
+  toJSONString(indent) {
+    return JSON.stringify(this.toJSON(), null, indent);
+  }
+  /** Parse from a plain object or JSON string */
+  static fromJSON(data) {
+    let obj;
+    if (typeof data === "string") {
+      try {
+        obj = JSON.parse(data);
+      } catch {
+        throw new RCANMessageError("Invalid JSON string");
+      }
+    } else {
+      obj = data;
+    }
+    if (!obj.cmd) throw new RCANMessageError("Missing required field: 'cmd'");
+    if (!obj.target) throw new RCANMessageError("Missing required field: 'target'");
+    if (!obj.rcan) throw new RCANMessageError("Missing required field: 'rcan'");
+    return new _RCANMessage({
+      rcan: obj.rcan,
+      cmd: obj.cmd,
+      target: obj.target,
+      params: obj.params ?? {},
+      confidence: obj.confidence,
+      modelIdentity: obj.model_identity ?? obj.modelIdentity,
+      signature: obj.signature,
+      timestamp: obj.timestamp
+    });
+  }
+};
+
+// src/crypto.ts
+function generateUUID() {
+  if (typeof globalThis.crypto !== "undefined" && typeof globalThis.crypto.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  try {
+    const { randomUUID } = __require("crypto");
+    return randomUUID();
+  } catch {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === "x" ? r : r & 3 | 8;
+      return v.toString(16);
+    });
+  }
+}
+function hmacSha256Sync(secret, data) {
+  if (typeof process !== "undefined" && void 0) {
+    try {
+      const { createHmac } = null;
+      return createHmac("sha256", secret).update(data).digest("hex");
+    } catch {
+    }
+  }
+  return pureHmacSha256(secret, data);
+}
+function sha256(msg) {
+  const K = [
+    1116352408,
+    1899447441,
+    3049323471,
+    3921009573,
+    961987163,
+    1508970993,
+    2453635748,
+    2870763221,
+    3624381080,
+    310598401,
+    607225278,
+    1426881987,
+    1925078388,
+    2162078206,
+    2614888103,
+    3248222580,
+    3835390401,
+    4022224774,
+    264347078,
+    604807628,
+    770255983,
+    1249150122,
+    1555081692,
+    1996064986,
+    2554220882,
+    2821834349,
+    2952996808,
+    3210313671,
+    3336571891,
+    3584528711,
+    113926993,
+    338241895,
+    666307205,
+    773529912,
+    1294757372,
+    1396182291,
+    1695183700,
+    1986661051,
+    2177026350,
+    2456956037,
+    2730485921,
+    2820302411,
+    3259730800,
+    3345764771,
+    3516065817,
+    3600352804,
+    4094571909,
+    275423344,
+    430227734,
+    506948616,
+    659060556,
+    883997877,
+    958139571,
+    1322822218,
+    1537002063,
+    1747873779,
+    1955562222,
+    2024104815,
+    2227730452,
+    2361852424,
+    2428436474,
+    2756734187,
+    3204031479,
+    3329325298
+  ];
+  let h0 = 1779033703, h1 = 3144134277, h2 = 1013904242, h3 = 2773480762;
+  let h4 = 1359893119, h5 = 2600822924, h6 = 528734635, h7 = 1541459225;
+  const msgLen = msg.length;
+  const bitLen = msgLen * 8;
+  const padded = [...msg];
+  padded.push(128);
+  while (padded.length % 64 !== 56) padded.push(0);
+  for (let i = 7; i >= 0; i--) padded.push(bitLen / Math.pow(2, i * 8) & 255);
+  for (let i = 0; i < padded.length; i += 64) {
+    const w = [];
+    for (let j = 0; j < 16; j++) {
+      w[j] = padded[i + j * 4] << 24 | padded[i + j * 4 + 1] << 16 | padded[i + j * 4 + 2] << 8 | padded[i + j * 4 + 3];
+    }
+    for (let j = 16; j < 64; j++) {
+      const s0 = ror(w[j - 15], 7) ^ ror(w[j - 15], 18) ^ w[j - 15] >>> 3;
+      const s1 = ror(w[j - 2], 17) ^ ror(w[j - 2], 19) ^ w[j - 2] >>> 10;
+      w[j] = w[j - 16] + s0 + w[j - 7] + s1 >>> 0;
+    }
+    let [a, b, c, d, e, f, g, h] = [h0, h1, h2, h3, h4, h5, h6, h7];
+    for (let j = 0; j < 64; j++) {
+      const S1 = ror(e, 6) ^ ror(e, 11) ^ ror(e, 25);
+      const ch = e & f ^ ~e & g;
+      const temp1 = h + S1 + ch + K[j] + w[j] >>> 0;
+      const S0 = ror(a, 2) ^ ror(a, 13) ^ ror(a, 22);
+      const maj = a & b ^ a & c ^ b & c;
+      const temp2 = S0 + maj >>> 0;
+      [h, g, f, e, d, c, b, a] = [g, f, e, d + temp1 >>> 0, c, b, a, temp1 + temp2 >>> 0];
+    }
+    h0 = h0 + a >>> 0;
+    h1 = h1 + b >>> 0;
+    h2 = h2 + c >>> 0;
+    h3 = h3 + d >>> 0;
+    h4 = h4 + e >>> 0;
+    h5 = h5 + f >>> 0;
+    h6 = h6 + g >>> 0;
+    h7 = h7 + h >>> 0;
+  }
+  const out = new Uint8Array(32);
+  const view = new DataView(out.buffer);
+  [h0, h1, h2, h3, h4, h5, h6, h7].forEach((v, i) => view.setUint32(i * 4, v));
+  return out;
+}
+function ror(x, n) {
+  return x >>> n | x << 32 - n;
+}
+function toBytes(s) {
+  if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(s);
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 255;
+  return out;
+}
+function toHex(bytes) {
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function pureHmacSha256(key, data) {
+  const BLOCK = 64;
+  let keyBytes = toBytes(key);
+  if (keyBytes.length > BLOCK) keyBytes = sha256(keyBytes);
+  const ipad = new Uint8Array(BLOCK), opad = new Uint8Array(BLOCK);
+  for (let i = 0; i < BLOCK; i++) {
+    ipad[i] = (keyBytes[i] ?? 0) ^ 54;
+    opad[i] = (keyBytes[i] ?? 0) ^ 92;
+  }
+  const dataBytes = toBytes(data);
+  const inner = new Uint8Array(BLOCK + dataBytes.length);
+  inner.set(ipad);
+  inner.set(dataBytes, BLOCK);
+  const innerHash = sha256(inner);
+  const outer = new Uint8Array(BLOCK + 32);
+  outer.set(opad);
+  outer.set(innerHash, BLOCK);
+  return toHex(sha256(outer));
+}
+
+// src/gates.ts
+var GateError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "GateError";
+  }
+};
+var ConfidenceGate = class {
+  constructor(threshold = 0.8) {
+    __publicField(this, "threshold");
+    if (threshold < 0 || threshold > 1) {
+      throw new GateError(`threshold must be in [0.0, 1.0] \u2014 got ${threshold}`);
+    }
+    this.threshold = threshold;
+  }
+  /** Returns true if the confidence score meets the threshold. */
+  allows(confidence) {
+    return confidence >= this.threshold;
+  }
+  /** Returns the margin (positive = allowed, negative = blocked). */
+  margin(confidence) {
+    return confidence - this.threshold;
+  }
+  /** Throw if confidence is below threshold. */
+  assert(confidence, action) {
+    if (!this.allows(confidence)) {
+      const label = action ? ` for action '${action}'` : "";
+      throw new GateError(
+        `Confidence ${confidence}${label} is below threshold ${this.threshold}`
+      );
+    }
+  }
+};
+var HiTLGate = class {
+  constructor() {
+    __publicField(this, "_pending", /* @__PURE__ */ new Map());
+  }
+  /**
+   * Request human approval for an action.
+   * Returns an approval token to poll or pass to approve/deny.
+   */
+  request(action, context = {}) {
+    const token = generateUUID();
+    this._pending.set(token, {
+      token,
+      action,
+      context,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+      status: "pending"
+    });
+    return token;
+  }
+  /** Approve a pending request. */
+  approve(token) {
+    const approval = this._pending.get(token);
+    if (!approval) throw new GateError(`Unknown token: ${token}`);
+    approval.status = "approved";
+  }
+  /** Deny a pending request with an optional reason. */
+  deny(token, reason) {
+    const approval = this._pending.get(token);
+    if (!approval) throw new GateError(`Unknown token: ${token}`);
+    approval.status = "denied";
+    if (reason) approval.reason = reason;
+  }
+  /** Check the status of a pending approval. */
+  check(token) {
+    const approval = this._pending.get(token);
+    if (!approval) throw new GateError(`Unknown token: ${token}`);
+    return approval.status;
+  }
+  /** Get all pending approvals. */
+  get pendingApprovals() {
+    return Array.from(this._pending.values()).filter((a) => a.status === "pending");
+  }
+  /** Get the full approval record. */
+  getApproval(token) {
+    return this._pending.get(token);
+  }
+  /** Clear resolved (approved/denied) approvals. */
+  clearResolved() {
+    for (const [token, approval] of this._pending.entries()) {
+      if (approval.status !== "pending") {
+        this._pending.delete(token);
+      }
+    }
+  }
+};
+
+// src/audit.ts
+var AuditError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "AuditError";
+  }
+};
+function computeContentHash(recordId, action, robotUri, timestamp, params) {
+  const payload = JSON.stringify(
+    { recordId, action, robotUri, timestamp, params },
+    Object.keys({ recordId, action, robotUri, timestamp, params }).sort()
+  );
+  return hmacSha256Sync("rcan-content-hash", payload);
+}
+function computeHmac(secret, data) {
+  const { hmac: _ignored, ...rest } = data;
+  const payload = JSON.stringify(rest, Object.keys(rest).sort());
+  return hmacSha256Sync(secret, payload);
+}
+var CommitmentRecord = class _CommitmentRecord {
+  constructor(data) {
+    __publicField(this, "recordId");
+    __publicField(this, "action");
+    __publicField(this, "robotUri");
+    __publicField(this, "confidence");
+    __publicField(this, "modelIdentity");
+    __publicField(this, "params");
+    __publicField(this, "safetyApproved");
+    __publicField(this, "timestamp");
+    __publicField(this, "contentHash");
+    __publicField(this, "previousHash");
+    __publicField(this, "hmac");
+    this.recordId = data.recordId;
+    this.action = data.action;
+    this.robotUri = data.robotUri;
+    this.confidence = data.confidence;
+    this.modelIdentity = data.modelIdentity;
+    this.params = data.params;
+    this.safetyApproved = data.safetyApproved;
+    this.timestamp = data.timestamp;
+    this.contentHash = data.contentHash;
+    this.previousHash = data.previousHash;
+    this.hmac = data.hmac;
+  }
+  static create(data, secret, previousHash = null) {
+    const recordId = generateUUID();
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const params = data.params ?? {};
+    const robotUri = data.robotUri ?? "";
+    const contentHash = computeContentHash(recordId, data.action, robotUri, timestamp, params);
+    const draft = {
+      recordId,
+      action: data.action,
+      robotUri,
+      confidence: data.confidence,
+      modelIdentity: data.modelIdentity,
+      params,
+      safetyApproved: data.safetyApproved ?? true,
+      timestamp,
+      contentHash,
+      previousHash,
+      hmac: ""
+    };
+    draft.hmac = computeHmac(secret, draft);
+    return new _CommitmentRecord(draft);
+  }
+  verify(secret) {
+    const expected = computeHmac(secret, this.toJSON());
+    return expected === this.hmac;
+  }
+  toJSON() {
+    return {
+      recordId: this.recordId,
+      action: this.action,
+      robotUri: this.robotUri,
+      confidence: this.confidence,
+      modelIdentity: this.modelIdentity,
+      params: this.params,
+      safetyApproved: this.safetyApproved,
+      timestamp: this.timestamp,
+      contentHash: this.contentHash,
+      previousHash: this.previousHash,
+      hmac: this.hmac
+    };
+  }
+  static fromJSON(obj) {
+    return new _CommitmentRecord(obj);
+  }
+};
+var AuditChain = class _AuditChain {
+  constructor(secret) {
+    __publicField(this, "_records", []);
+    __publicField(this, "_secret");
+    this._secret = secret;
+  }
+  get records() {
+    return this._records;
+  }
+  append(data) {
+    const prev = this._records[this._records.length - 1];
+    const prevHash = prev?.contentHash ?? null;
+    const record = CommitmentRecord.create(data, this._secret, prevHash);
+    this._records.push(record);
+    return record;
+  }
+  verifyAll() {
+    const errors = [];
+    let prevHash = null;
+    for (const record of this._records) {
+      if (!record.verify(this._secret)) {
+        errors.push(`HMAC invalid for record ${record.recordId.slice(0, 8)}`);
+      }
+      if (prevHash !== null && record.previousHash !== prevHash) {
+        errors.push(
+          `Chain broken at ${record.recordId.slice(0, 8)}: expected prev=${prevHash.slice(0, 12)}`
+        );
+      }
+      prevHash = record.contentHash;
+    }
+    return { valid: errors.length === 0, count: this._records.length, errors };
+  }
+  toJSONL() {
+    return this._records.map((r) => JSON.stringify(r.toJSON())).join("\n") + "\n";
+  }
+  static fromJSONL(text, secret) {
+    const chain = new _AuditChain(secret);
+    const lines = text.trim().split("\n").filter((l) => l.trim() !== "");
+    for (const line of lines) {
+      const obj = JSON.parse(line);
+      chain._records.push(CommitmentRecord.fromJSON(obj));
+    }
+    return chain;
+  }
+};
+
+// src/validate.ts
+function makeResult() {
+  return { ok: true, issues: [], warnings: [], info: [] };
+}
+function fail(result, msg) {
+  result.ok = false;
+  result.issues.push(msg);
+}
+function warn(result, msg) {
+  result.warnings.push(msg);
+}
+function note(result, msg) {
+  result.info.push(msg);
+}
+function validateURI(uri) {
+  const result = makeResult();
+  try {
+    const parsed = RobotURI.parse(uri);
+    note(result, `\u2705 Valid RCAN URI`);
+    note(result, `   Registry:     ${parsed.registry}`);
+    note(result, `   Manufacturer: ${parsed.manufacturer}`);
+    note(result, `   Model:        ${parsed.model}`);
+    note(result, `   Version:      ${parsed.version}`);
+    note(result, `   Device ID:    ${parsed.deviceId}`);
+  } catch (e) {
+    fail(result, `Invalid RCAN URI: ${e instanceof Error ? e.message : e}`);
+  }
+  return result;
+}
+function validateMessage(data) {
+  const result = makeResult();
+  let obj;
+  if (typeof data === "string") {
+    try {
+      obj = JSON.parse(data);
+    } catch {
+      fail(result, "Invalid JSON string");
+      return result;
+    }
+  } else if (typeof data === "object" && data !== null) {
+    obj = data;
+  } else {
+    fail(result, "Expected object or JSON string");
+    return result;
+  }
+  for (const field of ["rcan", "cmd", "target"]) {
+    if (!(field in obj) || !obj[field]) {
+      fail(result, `Missing required field: '${field}'`);
+    }
+  }
+  if (!result.ok) return result;
+  try {
+    const msg = RCANMessage.fromJSON(obj);
+    note(result, `\u2705 RCAN message valid (v${msg.rcan})`);
+    note(result, `   cmd:    ${msg.cmd}`);
+    note(result, `   target: ${msg.target}`);
+    if (msg.confidence !== void 0) {
+      note(result, `   confidence: ${msg.confidence}`);
+    } else {
+      warn(result, "No confidence score \u2014 add for RCAN \xA716 AI accountability");
+    }
+    if (msg.isSigned) {
+      note(result, `   signature: alg=${msg.signature?.alg}, kid=${msg.signature?.kid}`);
+    } else {
+      warn(result, "Message is unsigned (recommended for production)");
+    }
+  } catch (e) {
+    fail(result, `Message validation failed: ${e instanceof Error ? e.message : e}`);
+  }
+  return result;
+}
+function validateConfig(config) {
+  const result = makeResult();
+  const meta = config.metadata ?? {};
+  const agent = config.agent ?? {};
+  const rcanProto = config.rcan_protocol ?? {};
+  if (!meta.manufacturer) fail(result, "L1: metadata.manufacturer is required (\xA72)");
+  if (!meta.model) fail(result, "L1: metadata.model is required (\xA72)");
+  if (!config.rcan_version) warn(result, "L1: rcan_version not declared (recommended)");
+  if (!rcanProto.jwt_auth?.enabled) {
+    warn(result, "L2: jwt_auth not enabled (required for L2 conformance, \xA78)");
+  }
+  if (!agent.confidence_gates || agent.confidence_gates.length === 0) {
+    warn(result, "L2: confidence_gates not configured (\xA716)");
+  }
+  if (!agent.hitl_gates || agent.hitl_gates.length === 0) {
+    warn(result, "L3: hitl_gates not configured (\xA716)");
+  }
+  if (!agent.commitment_chain?.enabled) {
+    warn(result, "L3: commitment_chain not enabled (\xA716)");
+  }
+  if (meta.rrn) {
+    note(result, `\u2705 RRN registered: ${meta.rrn}`);
+  } else {
+    warn(result, "Robot not registered \u2014 visit rcan.dev/registry/register");
+  }
+  if (result.ok && result.issues.length === 0) {
+    const l1ok = !result.warnings.some((w) => w.startsWith("L1"));
+    const l2ok = l1ok && !result.warnings.some((w) => w.startsWith("L2"));
+    const l3ok = l2ok && !result.warnings.some((w) => w.startsWith("L3"));
+    const level = l3ok ? "L3" : l2ok ? "L2" : l1ok ? "L1" : "FAIL";
+    note(result, `\u2705 Config valid \u2014 conformance level: ${level}`);
+  }
+  return result;
+}
+
+// src/index.ts
+var VERSION = "0.1.0";
+var RCAN_VERSION = "1.2";
+export {
+  AuditChain,
+  AuditError,
+  CommitmentRecord,
+  ConfidenceGate,
+  GateError,
+  HiTLGate,
+  RCANMessage,
+  RCANMessageError,
+  RCAN_VERSION,
+  RobotURI,
+  RobotURIError,
+  VERSION,
+  validateConfig,
+  validateMessage,
+  validateURI
+};
+//# sourceMappingURL=browser.mjs.map

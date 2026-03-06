@@ -5,7 +5,7 @@
  * Records are chained via previousHash, creating a forensic audit trail.
  */
 
-import { createHmac, randomUUID } from "crypto";
+import { hmacSha256Sync, generateUUID } from "./crypto.js";
 
 export interface CommitmentRecordData {
   action: string;
@@ -48,13 +48,13 @@ function computeContentHash(
     { recordId, action, robotUri, timestamp, params },
     Object.keys({ recordId, action, robotUri, timestamp, params }).sort()
   );
-  return createHmac("sha256", "rcan-content-hash").update(payload).digest("hex");
+  return hmacSha256Sync("rcan-content-hash", payload);
 }
 
 function computeHmac(secret: string, data: CommitmentRecordJSON): string {
   const { hmac: _ignored, ...rest } = data;
   const payload = JSON.stringify(rest, Object.keys(rest).sort());
-  return createHmac("sha256", secret).update(payload).digest("hex");
+  return hmacSha256Sync(secret, payload);
 }
 
 export class CommitmentRecord {
@@ -89,7 +89,7 @@ export class CommitmentRecord {
     secret: string,
     previousHash: string | null = null
   ): CommitmentRecord {
-    const recordId = randomUUID();
+    const recordId = generateUUID();
     const timestamp = new Date().toISOString();
     const params = data.params ?? {};
     const robotUri = data.robotUri ?? "";
