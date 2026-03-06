@@ -50,6 +50,9 @@
     }
   },
   "browser": "dist/browser.mjs",
+  "bin": {
+    "rcan-validate": "./dist/rcan-validate.cjs"
+  },
   "files": [
     "dist",
     "README.md",

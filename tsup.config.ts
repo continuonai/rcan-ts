@@ -12,6 +12,17 @@ export default defineConfig([
     platform: "node",
     target: "node18",
   },
+  // CLI binary — rcan-validate
+  {
+    entry: { "rcan-validate": "src/bin/rcan-validate.ts" },
+    format: ["cjs"],
+    dts: false,
+    sourcemap: false,
+    outDir: "dist",
+    platform: "node",
+    target: "node18",
+    banner: { js: "#!/usr/bin/env node" },
+  },
   // Browser / Edge (ESM, Web Crypto)
   {
     entry: { "browser": "src/index.ts" },
