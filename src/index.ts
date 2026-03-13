@@ -1,5 +1,5 @@
 /**
- * rcan-ts — Official TypeScript SDK for RCAN v1.2
+ * rcan-ts — Official TypeScript SDK for RCAN v1.4
  * Robot Communication and Accountability Network
  *
  * @see https://rcan.dev
@@ -52,7 +52,7 @@ export type { RCANRegistryNode, RCANResolveResult } from "./types.js";
 
 export { fetchCanonicalSchema, validateConfigAgainstSchema, validateNodeAgainstSchema } from "./schema.js";
 
-export const VERSION = "0.3.0";
-export const SPEC_VERSION = "1.2";
+export const VERSION = "0.4.0";
+export const SPEC_VERSION = "1.4";
 /** @deprecated Use SPEC_VERSION instead */
-export const RCAN_VERSION = "1.2";
+export const RCAN_VERSION = "1.4";
