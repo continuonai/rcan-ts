@@ -52,7 +52,17 @@ export type { RCANRegistryNode, RCANResolveResult } from "./types.js";
 
 export { fetchCanonicalSchema, validateConfigAgainstSchema, validateNodeAgainstSchema } from "./schema.js";
 
-export const VERSION = "0.4.0";
+export {
+  makeEstopMessage,
+  makeStopMessage,
+  makeResumeMessage,
+  isSafetyMessage,
+  validateSafetyMessage,
+  SAFETY_MESSAGE_TYPE,
+} from "./safety.js";
+export type { SafetyMessage, SafetyEvent } from "./safety.js";
+
+export const VERSION = "0.4.1";
 export const SPEC_VERSION = "1.4";
 /** @deprecated Use SPEC_VERSION instead */
 export const RCAN_VERSION = "1.4";
