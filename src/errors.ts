@@ -97,3 +97,41 @@ export class RCANNodeTrustError extends RCANNodeError {
     Object.setPrototypeOf(this, RCANNodeTrustError.prototype);
   }
 }
+
+// ── v1.5 errors ───────────────────────────────────────────────────────────────
+
+/** Thrown when an incoming message has an incompatible MAJOR version */
+export class RCANVersionIncompatibleError extends RCANError {
+  constructor(incomingVersion: string, localVersion: string) {
+    super(`VERSION_INCOMPATIBLE: incoming=${incomingVersion}, local=${localVersion}`);
+    this.name = "RCANVersionIncompatibleError";
+    Object.setPrototypeOf(this, RCANVersionIncompatibleError.prototype);
+  }
+}
+
+/** Thrown when a replay attack is detected */
+export class RCANReplayAttackError extends RCANError {
+  constructor(reason: string) {
+    super(`REPLAY_DETECTED: ${reason}`);
+    this.name = "RCANReplayAttackError";
+    Object.setPrototypeOf(this, RCANReplayAttackError.prototype);
+  }
+}
+
+/** Thrown when a delegation chain is invalid or too deep */
+export class RCANDelegationChainError extends RCANError {
+  constructor(reason: string) {
+    super(`DELEGATION_CHAIN_ERROR: ${reason}`);
+    this.name = "RCANDelegationChainError";
+    Object.setPrototypeOf(this, RCANDelegationChainError.prototype);
+  }
+}
+
+/** Thrown when a config update is unauthorized or has a hash mismatch */
+export class RCANConfigAuthorizationError extends RCANError {
+  constructor(reason: string) {
+    super(`CONFIG_AUTH_ERROR: ${reason}`);
+    this.name = "RCANConfigAuthorizationError";
+    Object.setPrototypeOf(this, RCANConfigAuthorizationError.prototype);
+  }
+}

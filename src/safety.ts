@@ -3,7 +3,14 @@
  *
  * Safety messages bypass all queues and confidence gates per RCAN §6.
  * Use these helpers to build and validate ESTOP/STOP/RESUME messages.
+ *
+ * v1.5 updates:
+ *  - makeEstopMessage now includes qos: 2 (EXACTLY_ONCE)
+ *  - makeTransparencyMessage includes delegationChain (GAP-22)
  */
+
+import type { DelegationHop } from "./message.js";
+import { QoSLevel } from "./qos.js";
 
 export const SAFETY_MESSAGE_TYPE = 6;
 export type SafetyEvent = 'ESTOP' | 'STOP' | 'RESUME';
@@ -15,6 +22,8 @@ export interface SafetyMessage {
   reason: string;
   timestamp_ms: number;
   message_id: string;
+  /** v1.5: QoS level (ESTOP always 2) */
+  qos?: QoSLevel;
 }
 
 function generateId(): string {
@@ -23,15 +32,17 @@ function generateId(): string {
   }
   // Fallback for older Node versions: simple random hex
   const bytes = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   const hex = bytes.map((b) => b.toString(16).padStart(2, '0'));
   return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
 }
 
 /**
  * Create an ESTOP message — immediate actuator cut.
- * Use when human safety is at risk or collision is imminent.
+ *
+ * Protocol 66 safety invariant: ESTOP is NEVER blocked by new mechanisms.
+ * v1.5: forces qos=EXACTLY_ONCE (2) per §5.3.
  */
 export function makeEstopMessage(ruri: string, reason: string): SafetyMessage {
   return {
@@ -41,6 +52,7 @@ export function makeEstopMessage(ruri: string, reason: string): SafetyMessage {
     reason: reason.slice(0, 512),
     timestamp_ms: Date.now(),
     message_id: generateId(),
+    qos: QoSLevel.EXACTLY_ONCE,
   };
 }
 
@@ -99,4 +111,36 @@ export function validateSafetyMessage(msg: Partial<SafetyMessage>): string[] {
   if (!msg.message_id) errors.push('message_id is required');
   if (!msg.timestamp_ms || msg.timestamp_ms <= 0) errors.push('timestamp_ms must be positive');
   return errors;
+}
+
+// ── v1.5: Transparency message ────────────────────────────────────────────────
+
+export interface TransparencyMessage {
+  message_type: 11; // TRANSPARENCY
+  ruri: string;
+  disclosure: string;
+  timestamp_ms: number;
+  message_id: string;
+  /** v1.5 GAP-22: third-party control chain */
+  delegation_chain?: DelegationHop[];
+}
+
+/**
+ * Build a TRANSPARENCY message for EU AI Act Article 13 compliance.
+ *
+ * v1.5 (GAP-22): includes delegation_chain when available.
+ */
+export function makeTransparencyMessage(
+  ruri: string,
+  disclosure: string,
+  delegationChain?: DelegationHop[]
+): TransparencyMessage {
+  return {
+    message_type: 11,
+    ruri,
+    disclosure,
+    timestamp_ms: Date.now(),
+    message_id: generateId(),
+    delegation_chain: delegationChain,
+  };
 }

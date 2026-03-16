@@ -1,5 +1,5 @@
 /**
- * RCAN Message — command envelope for RCAN v1.2.
+ * RCAN Message — command envelope for RCAN v1.5.
  *
  * A RCANMessage wraps a robot command with:
  * - RCAN protocol version
@@ -8,9 +8,58 @@
  * - Optional AI confidence score (§16)
  * - Optional model identity (§16)
  * - Optional Ed25519 signature
+ * - v1.5: rcanVersion, senderType, cloudProvider, keyId, delegation chain, QoS, etc.
  */
 
-import { RobotURI } from "./address";
+import { RobotURI } from "./address.js";
+import { SPEC_VERSION } from "./version.js";
+
+// ── v1.5 Canonical MessageType table ─────────────────────────────────────────
+// These integers MUST match rcan-py.
+
+export enum MessageType {
+  COMMAND        = 1,
+  RESPONSE       = 2,
+  STATUS         = 3,
+  HEARTBEAT      = 4,
+  CONFIG         = 5,
+  SAFETY         = 6,
+  SENSOR_DATA    = 7,
+  AUDIT          = 8,
+  DISCOVER       = 9,
+  TRAINING_DATA  = 10,
+  TRANSPARENCY   = 11,
+  FEDERATION_SYNC = 12,
+  ALERT          = 13,
+  TELEOP         = 14,
+  CHAT           = 15,
+  ERROR          = 16,
+  COMMAND_ACK    = 17,
+  COMMAND_COMMIT = 18,
+  ROBOT_REVOCATION = 19,
+  CONSENT_REQUEST  = 20,
+  CONSENT_GRANT    = 21,
+  CONSENT_DENY     = 22,
+  FLEET_COMMAND    = 23,
+  SUBSCRIBE        = 24,
+  UNSUBSCRIBE      = 25,
+  FAULT_REPORT     = 26,
+  COMMAND_NACK     = 27,
+}
+
+// ── v1.5 SenderType ───────────────────────────────────────────────────────────
+/** §8.5 — Sender Type and Service Identity */
+export type SenderType = "robot" | "human" | "cloud_function" | "system";
+
+// ── v1.5 DelegationHop ────────────────────────────────────────────────────────
+/** §12 — Command Delegation and Chain of Custody */
+export interface DelegationHop {
+  issuerRuri: string;
+  humanSubject: string;
+  timestamp: string;
+  scope: string;
+  signature: string;
+}
 
 export interface SignatureBlock {
   alg: string;
@@ -20,6 +69,8 @@ export interface SignatureBlock {
 
 export interface RCANMessageData {
   rcan?: string;
+  /** v1.5: explicit protocol version field (defaults to SPEC_VERSION) */
+  rcanVersion?: string;
   cmd: string;
   target: string | RobotURI;
   params?: Record<string, unknown>;
@@ -28,6 +79,22 @@ export interface RCANMessageData {
   model_identity?: string; // snake_case alias
   signature?: SignatureBlock;
   timestamp?: string;
+  /** v1.5: GAP-08 sender identity */
+  senderType?: SenderType;
+  cloudProvider?: string;
+  /** v1.5: GAP-09 key id */
+  keyId?: string;
+  /** v1.5: GAP-01 delegation chain */
+  delegationChain?: DelegationHop[];
+  /** v1.5: GAP-13 fleet group */
+  groupId?: string;
+  /** v1.5: GAP-11 QoS level */
+  qos?: number;
+  /** v1.5: GAP-19 physical presence */
+  presenceVerified?: boolean;
+  proximityMeters?: number;
+  /** v1.5: GAP-15 observer */
+  readOnly?: boolean;
   [key: string]: unknown;
 }
 
@@ -40,6 +107,8 @@ export class RCANMessageError extends Error {
 
 export class RCANMessage {
   readonly rcan: string;
+  /** v1.5: rcanVersion field — defaults to SPEC_VERSION */
+  readonly rcanVersion: string;
   readonly cmd: string;
   readonly target: string;
   readonly params: Record<string, unknown>;
@@ -47,6 +116,16 @@ export class RCANMessage {
   readonly modelIdentity: string | undefined;
   readonly signature: SignatureBlock | undefined;
   readonly timestamp: string;
+  /** v1.5 fields */
+  readonly senderType: SenderType | undefined;
+  readonly cloudProvider: string | undefined;
+  readonly keyId: string | undefined;
+  readonly delegationChain: DelegationHop[] | undefined;
+  readonly groupId: string | undefined;
+  readonly qos: number | undefined;
+  readonly presenceVerified: boolean | undefined;
+  readonly proximityMeters: number | undefined;
+  readonly readOnly: boolean | undefined;
 
   constructor(data: RCANMessageData) {
     if (!data.cmd || data.cmd.trim() === "") {
@@ -56,7 +135,8 @@ export class RCANMessage {
       throw new RCANMessageError("'target' is required");
     }
 
-    this.rcan = data.rcan ?? "1.2";
+    this.rcan = data.rcan ?? SPEC_VERSION;
+    this.rcanVersion = data.rcanVersion ?? SPEC_VERSION;
     this.cmd = data.cmd;
     this.target =
       data.target instanceof RobotURI ? data.target.toString() : String(data.target);
@@ -65,6 +145,15 @@ export class RCANMessage {
     this.modelIdentity = data.modelIdentity ?? data.model_identity;
     this.signature = data.signature;
     this.timestamp = data.timestamp ?? new Date().toISOString();
+    this.senderType = data.senderType;
+    this.cloudProvider = data.cloudProvider;
+    this.keyId = data.keyId;
+    this.delegationChain = data.delegationChain;
+    this.groupId = data.groupId;
+    this.qos = data.qos;
+    this.presenceVerified = data.presenceVerified;
+    this.proximityMeters = data.proximityMeters;
+    this.readOnly = data.readOnly;
 
     if (this.confidence !== undefined) {
       if (this.confidence < 0 || this.confidence > 1) {
@@ -89,6 +178,7 @@ export class RCANMessage {
   toJSON(): Record<string, unknown> {
     const obj: Record<string, unknown> = {
       rcan: this.rcan,
+      rcanVersion: this.rcanVersion,
       cmd: this.cmd,
       target: this.target,
       timestamp: this.timestamp,
@@ -97,6 +187,15 @@ export class RCANMessage {
     if (this.confidence !== undefined) obj.confidence = this.confidence;
     if (this.modelIdentity) obj.model_identity = this.modelIdentity;
     if (this.signature) obj.signature = this.signature;
+    if (this.senderType !== undefined) obj.senderType = this.senderType;
+    if (this.cloudProvider !== undefined) obj.cloudProvider = this.cloudProvider;
+    if (this.keyId !== undefined) obj.keyId = this.keyId;
+    if (this.delegationChain !== undefined) obj.delegationChain = this.delegationChain;
+    if (this.groupId !== undefined) obj.groupId = this.groupId;
+    if (this.qos !== undefined) obj.qos = this.qos;
+    if (this.presenceVerified !== undefined) obj.presenceVerified = this.presenceVerified;
+    if (this.proximityMeters !== undefined) obj.proximityMeters = this.proximityMeters;
+    if (this.readOnly !== undefined) obj.readOnly = this.readOnly;
     return obj;
   }
 
@@ -124,6 +223,7 @@ export class RCANMessage {
 
     return new RCANMessage({
       rcan: obj.rcan as string,
+      rcanVersion: (obj.rcanVersion as string | undefined),
       cmd: obj.cmd as string,
       target: obj.target as string,
       params: (obj.params as Record<string, unknown>) ?? {},
@@ -133,6 +233,73 @@ export class RCANMessage {
         (obj.modelIdentity as string | undefined),
       signature: obj.signature as SignatureBlock | undefined,
       timestamp: obj.timestamp as string | undefined,
+      senderType: obj.senderType as SenderType | undefined,
+      cloudProvider: obj.cloudProvider as string | undefined,
+      keyId: obj.keyId as string | undefined,
+      delegationChain: obj.delegationChain as DelegationHop[] | undefined,
+      groupId: obj.groupId as string | undefined,
+      qos: obj.qos as number | undefined,
+      presenceVerified: obj.presenceVerified as boolean | undefined,
+      proximityMeters: obj.proximityMeters as number | undefined,
+      readOnly: obj.readOnly as boolean | undefined,
     });
   }
+}
+
+// ── v1.5 Cloud Relay helper ───────────────────────────────────────────────────
+
+/**
+ * §8.5 — Create a cloud-relay-stamped copy of a message.
+ *
+ * Sets senderType to "cloud_function" and records the cloud provider.
+ */
+export function makeCloudRelayMessage(
+  base: RCANMessage,
+  provider: string
+): RCANMessage {
+  const data = base.toJSON() as RCANMessageData;
+  data.senderType = "cloud_function";
+  data.cloudProvider = provider;
+  return new RCANMessage(data);
+}
+
+// ── v1.5 Delegation Chain helpers ────────────────────────────────────────────
+
+/**
+ * §12 — Add a delegation hop to a message.
+ */
+export function addDelegationHop(
+  msg: RCANMessage,
+  hop: DelegationHop
+): RCANMessage {
+  const chain = msg.delegationChain ? [...msg.delegationChain, hop] : [hop];
+  const data = msg.toJSON() as RCANMessageData;
+  data.delegationChain = chain;
+  return new RCANMessage(data);
+}
+
+/**
+ * §12 — Validate a delegation chain (structure only; signature verification
+ * requires crypto module).
+ *
+ * Rules:
+ *  - Max depth 4 hops
+ *  - Each hop must have issuerRuri, humanSubject, timestamp, scope, signature
+ */
+export function validateDelegationChain(
+  chain: DelegationHop[]
+): { valid: boolean; reason: string } {
+  if (chain.length > 4) {
+    return { valid: false, reason: "DELEGATION_CHAIN_EXCEEDED: max depth is 4 hops" };
+  }
+  for (let i = 0; i < chain.length; i++) {
+    const hop = chain[i];
+    if (!hop) return { valid: false, reason: `hop ${i} is undefined` };
+    if (!hop.issuerRuri) return { valid: false, reason: `hop ${i}: missing issuerRuri` };
+    if (!hop.humanSubject) return { valid: false, reason: `hop ${i}: missing humanSubject` };
+    if (!hop.timestamp) return { valid: false, reason: `hop ${i}: missing timestamp` };
+    if (!hop.scope) return { valid: false, reason: `hop ${i}: missing scope` };
+    if (!hop.signature) return { valid: false, reason: `hop ${i}: missing signature` };
+  }
+  return { valid: true, reason: "ok" };
 }

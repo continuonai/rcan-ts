@@ -1,5 +1,5 @@
 /**
- * rcan-ts — Official TypeScript SDK for RCAN v1.4
+ * rcan-ts — Official TypeScript SDK for RCAN v1.5
  * Robot Communication and Accountability Network
  *
  * @see https://rcan.dev
@@ -9,8 +9,8 @@
 export { RobotURI, RobotURIError } from "./address.js";
 export type { RobotURIOptions } from "./address.js";
 
-export { RCANMessage, RCANMessageError } from "./message.js";
-export type { RCANMessageData, SignatureBlock } from "./message.js";
+export { RCANMessage, RCANMessageError, MessageType, makeCloudRelayMessage, addDelegationHop, validateDelegationChain } from "./message.js";
+export type { RCANMessageData, SignatureBlock, SenderType, DelegationHop } from "./message.js";
 
 export { ConfidenceGate, HiTLGate, GateError } from "./gates.js";
 export type { ApprovalStatus, PendingApproval } from "./gates.js";
@@ -37,6 +37,11 @@ export {
   RCANNodeNotFoundError,
   RCANNodeSyncError,
   RCANNodeTrustError,
+  // v1.5 errors
+  RCANVersionIncompatibleError,
+  RCANReplayAttackError,
+  RCANDelegationChainError,
+  RCANConfigAuthorizationError,
 } from "./errors.js";
 
 export { RegistryClient } from "./registry.js";
@@ -56,13 +61,70 @@ export {
   makeEstopMessage,
   makeStopMessage,
   makeResumeMessage,
+  makeTransparencyMessage,
   isSafetyMessage,
   validateSafetyMessage,
   SAFETY_MESSAGE_TYPE,
 } from "./safety.js";
-export type { SafetyMessage, SafetyEvent } from "./safety.js";
+export type { SafetyMessage, SafetyEvent, TransparencyMessage } from "./safety.js";
 
-export const VERSION = "0.4.1";
-export const SPEC_VERSION = "1.4";
-/** @deprecated Use SPEC_VERSION instead */
-export const RCAN_VERSION = "1.4";
+// ── v1.5: version ──────────────────────────────────────────────────────────────
+export { SPEC_VERSION, validateVersionCompat } from "./version.js";
+
+// ── v1.5: replay attack prevention (GAP-03) ────────────────────────────────────
+export { ReplayCache, validateReplay } from "./replay.js";
+export type { ReplayCheckResult, ReplayableMessage } from "./replay.js";
+
+// ── v1.5: clock synchronization (GAP-04) ───────────────────────────────────────
+export { checkClockSync, assertClockSynced, ClockDriftError } from "./clock.js";
+export type { ClockSyncStatus } from "./clock.js";
+
+// ── v1.5: QoS (GAP-11) ────────────────────────────────────────────────────────
+export { QoSLevel, QoSManager, QoSAckTimeoutError, makeEstopWithQoS } from "./qos.js";
+export type { QoSSendOptions, QoSResult } from "./qos.js";
+
+// ── v1.5: config update (GAP-07) ──────────────────────────────────────────────
+export { makeConfigUpdate, validateConfigUpdate } from "./configUpdate.js";
+
+// ── v1.5: key rotation (GAP-09) ───────────────────────────────────────────────
+export { KeyStore, makeKeyRotationMessage } from "./keys.js";
+export type { JWKEntry, JWKSDocument } from "./keys.js";
+
+// ── v1.5: consent wire (GAP-05) ───────────────────────────────────────────────
+export {
+  makeConsentRequest,
+  makeConsentGrant,
+  makeConsentDeny,
+  validateConsentMessage,
+} from "./consent.js";
+export type { ConsentType, ConsentRequestParams, ConsentResponseParams } from "./consent.js";
+
+// ── v1.5: revocation (GAP-02) ─────────────────────────────────────────────────
+export {
+  RevocationCache,
+  checkRevocation,
+  makeRevocationBroadcast,
+} from "./revocation.js";
+export type { RevocationStatus, RevocationStatusValue } from "./revocation.js";
+
+// ── v1.5: training data consent (GAP-10) ──────────────────────────────────────
+export {
+  DataCategory,
+  makeTrainingConsentRequest,
+  makeTrainingConsentGrant,
+  makeTrainingConsentDeny,
+  validateTrainingDataMessage,
+} from "./trainingConsent.js";
+export type { TrainingConsentRequestParams } from "./trainingConsent.js";
+
+// ── v1.5: offline mode (GAP-06) ───────────────────────────────────────────────
+export { OfflineModeManager } from "./offline.js";
+export type { OfflineState, OfflineCommandResult, CachedKey } from "./offline.js";
+
+// ── v1.5: fault reporting (GAP-20) ────────────────────────────────────────────
+export { FaultCode, makeFaultReport } from "./faultReport.js";
+export type { FaultSeverity, FaultReportParams, AuditExportRequest } from "./faultReport.js";
+
+export const VERSION = "0.5.0";
+/** @deprecated Use SPEC_VERSION from ./version instead */
+export const RCAN_VERSION = "1.5";

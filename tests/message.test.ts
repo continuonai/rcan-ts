@@ -16,9 +16,9 @@ describe("RCANMessage constructor", () => {
     expect(msg.rcan).toBe("1.2");
   });
 
-  test("defaults rcan to 1.2", () => {
+  test("defaults rcan to SPEC_VERSION (1.5)", () => {
     const msg = new RCANMessage({ cmd: "stop", target: "rcan://r/a/b/v1/x" });
-    expect(msg.rcan).toBe("1.2");
+    expect(msg.rcan).toBe("1.5");
   });
 
   test("throws on missing cmd", () => {

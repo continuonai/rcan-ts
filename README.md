@@ -1,6 +1,6 @@
 # rcan-ts
 
-Official TypeScript SDK for the **RCAN v1.4** Robot Communication and Addressing Network protocol.
+Official TypeScript SDK for the **RCAN v1.5** Robot Communication and Addressing Network protocol.
 
 [![npm version](https://badge.fury.io/js/%40continuonai%2Frcan-ts.svg)](https://www.npmjs.com/package/@continuonai/rcan-ts)
 [![CI](https://github.com/continuonai/rcan-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/continuonai/rcan-ts/actions)
@@ -240,7 +240,7 @@ The Python and TypeScript SDKs share an identical API surface — `RobotURI`, `R
 ## Links
 
 - ⚡ [Quickstart](https://rcan.dev/quickstart) — from zero to first message in 5 min
-- 📖 [RCAN Spec v1.4](https://rcan.dev/spec) — full protocol specification
+- 📖 [RCAN Spec v1.5](https://rcan.dev/spec) — full protocol specification
 - 🌐 [rcan.dev](https://rcan.dev) — robot registry and documentation
 - 🐍 [rcan-py](https://github.com/continuonai/rcan-py) — Python SDK
 - 🤖 [OpenCastor](https://github.com/craigm26/OpenCastor) — Python robot runtime (RCAN reference implementation)

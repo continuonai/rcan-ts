@@ -1,3 +1,45 @@
+## [0.5.0] — 2026-03-16
+
+### RCAN v1.5 Support — 18 Gaps Addressed
+
+#### Foundation (Batch 1)
+- **GAP-12**: `src/version.ts` — `SPEC_VERSION = "1.5"` as single source of truth; `validateVersionCompat()`
+- **GAP-03**: `src/replay.ts` — `ReplayCache` with sliding window; `validateReplay()`; safety messages capped at 10s window
+- **GAP-04**: `src/clock.ts` — `checkClockSync()`, `ClockSyncStatus`, `assertClockSynced()`, `ClockDriftError`
+- **GAP-08**: `src/message.ts` — `SenderType` union, `senderType`/`cloudProvider` fields, `makeCloudRelayMessage()`
+
+#### Core Features (Batch 2)
+- **GAP-11**: `src/qos.ts` — `QoSLevel` enum (FIRE_AND_FORGET=0/ACKNOWLEDGED=1/EXACTLY_ONCE=2), `QoSManager`, `QoSAckTimeoutError`; ESTOP forced to QoS=2
+- **GAP-07**: `src/configUpdate.ts` — `makeConfigUpdate()`, `validateConfigUpdate()`, safety_overrides requires creator role
+- **GAP-09**: `src/keys.ts` — `KeyStore`, `makeKeyRotationMessage()`, `JWKSDocument`
+- **GAP-05**: `src/consent.ts` — `makeConsentRequest()`, `makeConsentGrant()`, `makeConsentDeny()`, `validateConsentMessage()`
+
+#### Advanced Features (Batch 3)
+- **GAP-02**: `src/revocation.ts` — `RevocationCache` (1h TTL), `checkRevocation()`, `makeRevocationBroadcast()`
+- **GAP-10**: `src/trainingConsent.ts` — `DataCategory` enum, `makeTrainingConsentRequest/Grant/Deny()`, `validateTrainingDataMessage()`
+- **GAP-01**: `src/message.ts` — `DelegationHop` interface, `delegationChain` on `RCANMessage`, `addDelegationHop()`, `validateDelegationChain()`
+- **GAP-06**: `src/offline.ts` — `OfflineModeManager`, `canAcceptCommand()`, key caching, Protocol 66 manifest fields
+
+#### SHOULD Gaps (Batch 4)
+- **GAP-13**: `groupId?: string` on `RCANMessage`; `FLEET_COMMAND` (23) message type
+- **GAP-15**: `SUBSCRIBE` (24) / `UNSUBSCRIBE` (25) message types; `readOnly?: boolean`
+- **GAP-19**: `presenceVerified?: boolean`, `proximityMeters?: number` on `RCANMessage`
+- **GAP-20**: `src/faultReport.ts` — `FaultCode` enum, `makeFaultReport()`, `AuditExportRequest`
+- **GAP-21**: `AuditExportRequest` interface
+- **GAP-22**: `makeTransparencyMessage()` updated to include `delegation_chain`
+
+#### MessageType Canonicalization
+- `MessageType` enum now matches rcan-py canonical table: COMMAND=1…FAULT_REPORT=26, COMMAND_NACK=27
+
+#### New Errors
+- `RCANVersionIncompatibleError`, `RCANReplayAttackError`, `RCANDelegationChainError`, `RCANConfigAuthorizationError`
+
+#### Tests
+- 8 new test files: replay, clock, qos, consent-wire, revocation, training-consent, delegation, offline
+- 106 new tests (311 total, all passing)
+
+---
+
 ## [0.3.0] — 2026-03-06
 
 ### Added
