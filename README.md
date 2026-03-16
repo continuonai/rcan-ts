@@ -1,6 +1,6 @@
 # rcan-ts
 
-Official TypeScript SDK for the **RCAN v1.2** Robot Communication and Accountability Network protocol.
+Official TypeScript SDK for the **RCAN v1.4** Robot Communication and Addressing Network protocol.
 
 [![npm version](https://badge.fury.io/js/%40continuonai%2Frcan-ts.svg)](https://www.npmjs.com/package/@continuonai/rcan-ts)
 [![CI](https://github.com/continuonai/rcan-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/continuonai/rcan-ts/actions)
@@ -240,10 +240,12 @@ The Python and TypeScript SDKs share an identical API surface — `RobotURI`, `R
 ## Links
 
 - ⚡ [Quickstart](https://rcan.dev/quickstart) — from zero to first message in 5 min
-- 📖 [RCAN Spec](https://rcan.dev/spec) — full protocol specification
+- 📖 [RCAN Spec v1.4](https://rcan.dev/spec) — full protocol specification
 - 🌐 [rcan.dev](https://rcan.dev) — robot registry and documentation
 - 🐍 [rcan-py](https://github.com/continuonai/rcan-py) — Python SDK
-- 🤖 [OpenCastor](https://github.com/craigm26/OpenCastor) — robot runtime with RCAN built in
+- 🤖 [OpenCastor](https://github.com/craigm26/OpenCastor) — Python robot runtime (RCAN reference implementation)
+- 🖥️ [OpenCastor Fleet UI](https://app.opencastor.com) — Flutter web app for remote fleet management (uses rcan-ts for message construction)
+- 🏛️ [Robot Registry Foundation](https://robotregistryfoundation.org) — global robot identity registry
 
 ---
 
