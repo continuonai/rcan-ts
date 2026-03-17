@@ -1,62 +1,50 @@
 # rcan-ts
 
-Official TypeScript SDK for the **RCAN v1.6** Robot Communication and Addressing Network protocol.
+TypeScript SDK for the [RCAN protocol](https://rcan.dev/spec/) — build robots that communicate securely, audit every action, and enforce safety gates in Node.js or the browser.
 
-[![npm version](https://badge.fury.io/js/%40continuonai%2Frcan-ts.svg)](https://www.npmjs.com/package/@continuonai/rcan-ts)
+[![npm version](https://img.shields.io/npm/v/@continuonai/rcan-ts.svg)](https://www.npmjs.com/package/@continuonai/rcan-ts)
+[![RCAN Spec](https://img.shields.io/badge/RCAN-v1.6-blue)](https://rcan.dev/spec/)
 [![CI](https://github.com/continuonai/rcan-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/continuonai/rcan-ts/actions)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Node](https://img.shields.io/badge/node-18%2B-green)](https://nodejs.org)
 
+## Install
+
+```bash
+npm install @continuonai/rcan-ts@0.6.0
 ```
-npm install @continuonai/rcan-ts
-```
 
-> **v0.6.0** — RCAN v1.6 spec compliance (GAP-14 identity LoA, GAP-16 federated consent, GAP-17 constrained transport, GAP-18 multi-modal payloads)
+Node 18+ required (uses Web Crypto API for `transport.encodeMinimal`).
 
-### CDN / Browser (no build step)
+### Browser / CDN (no build step)
 
 ```html
 <script src="https://unpkg.com/@continuonai/rcan-ts/dist/rcan.iife.js"></script>
 <script>
-  const uri = new RCAN.RobotURI.parse('rcan://registry.rcan.dev/acme/arm/v1/unit-001');
+  const uri = RCAN.RobotURI.parse('rcan://registry.rcan.dev/acme/arm/v1/unit-001');
   console.log(uri.manufacturer); // acme
 </script>
 ```
 
-Also available via jsDelivr:
-```html
-<script src="https://cdn.jsdelivr.net/npm/@continuonai/rcan-ts/dist/rcan.iife.js"></script>
-```
-
----
-
 ## Quick Start
 
-### Robot URI
-
-Every robot has a globally unique, resolvable address:
-
 ```typescript
-import { RobotURI } from "@continuonai/rcan-ts";
+import { RobotURI, RCANMessage, ConfidenceGate } from "@continuonai/rcan-ts";
+import { ReplayCache } from "@continuonai/rcan-ts";
+import { AuditChain } from "@continuonai/rcan-ts";
 
+// 1. Address a robot
 const uri = RobotURI.build({
   manufacturer: "acme",
-  model: "robotarm",
+  model: "arm",
   version: "v2",
   deviceId: "unit-001",
 });
-console.log(uri.toString());
-// rcan://registry.rcan.dev/acme/robotarm/v2/unit-001
+// rcan://registry.rcan.dev/acme/arm/v2/unit-001
 
-const parsed = RobotURI.parse("rcan://registry.rcan.dev/acme/robotarm/v2/unit-001");
-console.log(parsed.namespace); // "acme/robotarm"
-```
-
-### Building a Message
-
-```typescript
-import { RCANMessage, ConfidenceGate } from "@continuonai/rcan-ts";
-
+// 2. Gate on AI confidence before acting
 const gate = new ConfidenceGate(0.8);
-const confidence = 0.91; // from your AI model
+const confidence = 0.91;
 
 if (gate.allows(confidence)) {
   const msg = new RCANMessage({
@@ -64,190 +52,110 @@ if (gate.allows(confidence)) {
     target: uri,
     params: { distance_m: 1.0 },
     confidence,
-    modelIdentity: "Qwen2.5-7B-Q4",
+    modelIdentity: "gemini-2.5-flash",
   });
-  console.log(msg.toJSONString(2));
+
+  // 3. Replay attack prevention
+  const cache = new ReplayCache({ windowSeconds: 300 });
+  if (cache.isReplay(msg.msgId)) throw new Error("Replay attack detected");
+  cache.record(msg.msgId);
+
+  // 4. ESTOP with QoS 2 (EXACTLY_ONCE) — never dropped
+  const estop = new RCANMessage({
+    cmd: "estop",
+    target: uri,
+    qos: 2, // QoSLevel.EXACTLY_ONCE
+  });
 }
-```
 
-### Human-in-the-Loop Gate
-
-```typescript
-import { HiTLGate } from "@continuonai/rcan-ts";
-
-const hitl = new HiTLGate();
-const token = hitl.request("stop_emergency", { reason: "obstacle detected" });
-
-// Later, from your operator UI:
-hitl.approve(token);
-
-if (hitl.check(token) === "approved") {
-  // execute action
-}
-```
-
-### Tamper-Evident Audit Chain
-
-```typescript
-import { AuditChain } from "@continuonai/rcan-ts";
-
+// 5. Tamper-evident audit chain
 const chain = new AuditChain("your-hmac-secret");
-
 chain.append({
   action: "move_forward",
   robotUri: uri.toString(),
   confidence: 0.91,
   safetyApproved: true,
 });
-chain.append({ action: "stop" });
-
-const { valid, count, errors } = chain.verifyAll();
+const { valid, count } = chain.verifyAll();
 console.log(`Chain valid: ${valid}, ${count} records`);
 
-// Export to JSONL for long-term storage
+// Export as JSONL for long-term storage
 const jsonl = chain.toJSONL();
 ```
 
-### Validation
+## What's in v0.6.0
+
+| Module | Description |
+|---|---|
+| `message` | Core `RCANMessage` envelope with all v1.6 fields |
+| `address` | `RobotURI` — parse, build, and validate RCAN robot addresses |
+| `audit` | `AuditChain` + `CommitmentRecord` — tamper-evident HMAC-chained logs |
+| `gates` | `ConfidenceGate`, `HiTLGate` — safety gates for AI-driven actions |
+| `replay` | `ReplayCache` — sliding-window replay attack prevention (GAP-03) |
+| `clock` | `ClockSyncStatus` — NTP clock sync verification (GAP-04) |
+| `qos` | `QoSLevel` — FIRE_AND_FORGET / ACKNOWLEDGED / EXACTLY_ONCE (GAP-11) |
+| `consent` | Consent wire protocol — request/grant/deny (GAP-05) |
+| `revocation` | Robot identity revocation with TTL cache (GAP-02) |
+| `trainingConsent` | Training data consent, GDPR/EU AI Act Annex III §5 (GAP-10) |
+| `delegation` | Command delegation chain, max 4 hops, Ed25519-signed (GAP-01) |
+| `offline` | Offline operation mode — ESTOP always allowed (GAP-06) |
+| `faultReport` | `FaultCode` structured fault taxonomy (GAP-20) |
+| `federation` | Federated consent — cross-registry trust, DNS discovery (GAP-16) |
+| `transport` | Constrained transports — compact CBOR, 32-byte ESTOP minimal, BLE (GAP-17) |
+| `multimodal` | Multi-modal payloads — inline/ref media, streaming (GAP-18) |
+| `identity` | Level of Assurance — LoA policies, JWT parsing (GAP-14) |
+| `keys` | Key rotation with JWKS-compatible `KeyStore` (GAP-09) |
+| `configUpdate` | `CONFIG_UPDATE` protocol with safety scope enforcement (GAP-07) |
+| `node` | `NodeClient` — resolve RRNs across federated registry nodes (§17) |
+| `validate` | L1/L2/L3 conformance validation for configs, messages, URIs |
+| `schema` | Canonical JSON schema validation against rcan.dev |
+
+## Protocol 66 Compliance
+
+- **ESTOP always delivered** — send with `qos: 2` (`EXACTLY_ONCE`); never blocked
+- **Local safety wins** — `OfflineMode` enforces limits without cloud connectivity
+- **Confidence gates run locally** — `ConfidenceGate` makes no network calls
+- **Audit chain required** — `AuditChain.verifyAll()` before executing flagged commands
+
+## Registry Resolution
 
 ```typescript
-import { validateMessage, validateConfig, validateURI } from "@continuonai/rcan-ts";
-
-const result = validateMessage({
-  rcan: "1.2",
-  cmd: "move_forward",
-  target: "rcan://registry.rcan.dev/acme/arm/v2/unit-001",
-  confidence: 0.91,
-});
-
-if (!result.ok) {
-  result.issues.forEach((i) => console.error("❌", i));
-}
-result.warnings.forEach((w) => console.warn("⚠️", w));
-```
-
----
-
-## API Reference
-
-| Export | Description |
-|--------|-------------|
-| `RobotURI` | Parse/build RCAN Robot URIs |
-| `RCANMessage` | RCAN command message with confidence + signing |
-| `ConfidenceGate` | AI confidence threshold gate |
-| `HiTLGate` | Human-in-the-loop approval gate |
-| `CommitmentRecord` | HMAC-sealed audit record |
-| `AuditChain` | Tamper-evident chain of CommitmentRecords |
-| `validateURI` | Validate a Robot URI string |
-| `validateMessage` | Validate a RCAN message object |
-| `validateConfig` | L1/L2/L3 conformance check for a robot RCAN config |
-| `NodeClient` | Resolve RRNs from federated registry nodes (§17) |
-| `fetchCanonicalSchema` | Fetch the canonical JSON schema from rcan.dev |
-| `validateConfigAgainstSchema` | Validate a config object against the live JSON schema |
-| `validateNodeAgainstSchema` | Validate a node manifest against the node schema |
-
----
-
-## Distributed Registry Nodes (§17)
-
-RCAN v1.2 §17 introduces a federated registry network. `NodeClient` resolves RRNs from any node — root or delegated authoritative.
-
-```typescript
-import { NodeClient } from '@continuonai/rcan-ts';
+import { NodeClient } from "@continuonai/rcan-ts";
 
 const client = new NodeClient();
 
 // Resolve an RRN across the federation
-const result = await client.resolve('RRN-BD-000000000001');
-console.log(`Resolved by: ${result.resolved_by}`);
-console.log(`Robot: ${result.record.name}`);
+const result = await client.resolve("RRN-000000000001");
+console.log(result.record.name);         // "Bob"
+console.log(result.record.verification_tier); // "verified"
 
-// Discover the authoritative node for a namespace
-const node = await client.discover('RRN-BD-000000000001');
-console.log(`Authoritative: ${node.operator} at ${node.api_base}`);
-
-// List all known registry nodes
-const nodes = await client.listNodes();
-nodes.forEach(n => console.log(`${n.operator}: ${n.namespace_prefix}`));
-
-// Verify a node manifest
-const manifest = await client.getNodeManifest('https://registry.example.com');
-const isValid = client.verifyNode(manifest);
-
-// Error handling
-import { RCANNodeNotFoundError, RCANNodeTrustError } from '@continuonai/rcan-ts';
-try {
-  const result = await client.resolve('RRN-UNKNOWN-000000000001');
-} catch (e) {
-  if (e instanceof RCANNodeNotFoundError) {
-    console.log(`Not found: ${e.rrn}`);
-  } else if (e instanceof RCANNodeTrustError) {
-    console.log(`Trust failure: ${e.reason}`);
-  }
-}
+// Discover which node is authoritative
+const node = await client.discover("RRN-BD-000000000001");
+console.log(node.operator);  // "Boston Dynamics, Inc."
 ```
 
-### RRN Format
+## Spec Compliance
 
-```
-Root namespace:    RRN-000000000001    (12-digit recommended, 8-digit still valid)
-Delegated:        RRN-BD-000000000001  (prefix 2-8 alphanumeric chars)
-Legacy (valid):   RRN-00000001         (8-digit, backward compatible)
-```
+Implements [RCAN v1.6](https://rcan.dev/spec/) — 405 tests, 0 skipped.
 
-## Schema Validation
-
-Validate configs against the canonical JSON schema published at rcan.dev:
-
-```typescript
-import { validateConfigAgainstSchema, validateNodeAgainstSchema } from '@continuonai/rcan-ts';
-
-// Validate a RCAN config against the canonical schema from rcan.dev
-const result = await validateConfigAgainstSchema(myConfig);
-if (!result.valid) {
-  console.error('Config invalid:', result.errors);
-} else if (result.skipped) {
-  console.warn('Schema validation skipped (rcan.dev unreachable)');
-}
-
-// Validate a node manifest
-const nodeResult = await validateNodeAgainstSchema(manifest);
-```
-
-### CDN / Browser Usage
-
-```html
-<script src="https://unpkg.com/@continuonai/rcan-ts/dist/rcan.iife.js"></script>
-<script>
-  const { validateConfig, NodeClient } = window.RCAN;
-  const client = new NodeClient();
-  client.resolve('RRN-000000000001').then(r => console.log(r));
-</script>
-```
-
----
+API surface is intentionally identical to rcan-py: `RobotURI`, `RCANMessage`, `ConfidenceGate`, `HiTLGate`, `AuditChain`, and `validateConfig` work the same way in both languages.
 
 ## Ecosystem
 
-| Package | Language | Install |
-|---------|----------|---------|
-| [rcan-py](https://github.com/continuonai/rcan-py) | Python 3.10+ | `pip install rcan` |
-| **rcan-ts** (this) | TypeScript / Node | `npm install @continuonai/rcan-ts` |
-| [OpenCastor](https://github.com/craigm26/OpenCastor) | Python (robot runtime) | `curl -sL opencastor.com/install \| bash` |
+| Package | Version | Purpose |
+|---|---|---|
+| [rcan-py](https://github.com/continuonai/rcan-py) | v0.6.0 | Python SDK |
+| **rcan-ts** (this) | v0.6.0 | TypeScript SDK |
+| [rcan-spec](https://github.com/continuonai/rcan-spec) | v1.6.0 | Protocol spec |
+| [OpenCastor](https://github.com/craigm26/OpenCastor) | v2026.4.1.0 | Robot runtime (reference impl) |
+| [RRF](https://robotregistryfoundation.org) | v1.6.0 | Robot identity registry |
+| [Fleet UI](https://app.opencastor.com) | live | Web fleet dashboard |
 
-The Python and TypeScript SDKs share an identical API surface — `RobotURI`, `RCANMessage`, `ConfidenceGate`, `HiTLGate`, `AuditChain`, and `validateConfig` work the same way in both languages.
+## Contributing
 
-## Links
+Issues and PRs welcome at [github.com/continuonai/rcan-ts](https://github.com/continuonai/rcan-ts).
 
-- ⚡ [Quickstart](https://rcan.dev/quickstart) — from zero to first message in 5 min
-- 📖 [RCAN Spec v1.6](https://rcan.dev/spec) — full protocol specification
-- 🌐 [rcan.dev](https://rcan.dev) — robot registry and documentation
-- 🐍 [rcan-py](https://github.com/continuonai/rcan-py) — Python SDK
-- 🤖 [OpenCastor](https://github.com/craigm26/OpenCastor) — Python robot runtime (RCAN reference implementation)
-- 🖥️ [OpenCastor Fleet UI](https://app.opencastor.com) — Flutter web app for remote fleet management (uses rcan-ts for message construction)
-- 🏛️ [Robot Registry Foundation](https://robotregistryfoundation.org) — global robot identity registry
-
----
+Spec discussions: [github.com/continuonai/rcan-spec/issues](https://github.com/continuonai/rcan-spec/issues)
 
 ## License
 
