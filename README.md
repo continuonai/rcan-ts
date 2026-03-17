@@ -9,7 +9,7 @@ Official TypeScript SDK for the **RCAN v1.6** Robot Communication and Addressing
 npm install @continuonai/rcan-ts
 ```
 
-> **v0.2.0** — RCAN v1.2 spec compliance including §17 Distributed Registry Node Protocol
+> **v0.6.0** — RCAN v1.6 spec compliance (GAP-14 identity LoA, GAP-16 federated consent, GAP-17 constrained transport, GAP-18 multi-modal payloads)
 
 ### CDN / Browser (no build step)
 
@@ -240,7 +240,7 @@ The Python and TypeScript SDKs share an identical API surface — `RobotURI`, `R
 ## Links
 
 - ⚡ [Quickstart](https://rcan.dev/quickstart) — from zero to first message in 5 min
-- 📖 [RCAN Spec v1.5](https://rcan.dev/spec) — full protocol specification
+- 📖 [RCAN Spec v1.6](https://rcan.dev/spec) — full protocol specification
 - 🌐 [rcan.dev](https://rcan.dev) — robot registry and documentation
 - 🐍 [rcan-py](https://github.com/continuonai/rcan-py) — Python SDK
 - 🤖 [OpenCastor](https://github.com/craigm26/OpenCastor) — Python robot runtime (RCAN reference implementation)
