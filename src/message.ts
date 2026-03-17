@@ -95,6 +95,13 @@ export interface RCANMessageData {
   proximityMeters?: number;
   /** v1.5: GAP-15 observer */
   readOnly?: boolean;
+  /** v1.6: GAP-14 level of assurance */
+  loa?: number;
+  /** v1.6: GAP-17 transport encoding hint */
+  transportEncoding?: string;
+  /** v1.6: GAP-18 multi-modal media chunks */
+  // typed as unknown[] to avoid circular dependency with multimodal.ts
+  mediaChunks?: Array<Record<string, unknown>>;
   [key: string]: unknown;
 }
 
@@ -126,6 +133,12 @@ export class RCANMessage {
   readonly presenceVerified: boolean | undefined;
   readonly proximityMeters: number | undefined;
   readonly readOnly: boolean | undefined;
+  /** v1.6: GAP-14 level of assurance */
+  readonly loa: number | undefined;
+  /** v1.6: GAP-17 transport encoding hint */
+  readonly transportEncoding: string | undefined;
+  /** v1.6: GAP-18 multi-modal media chunks */
+  readonly mediaChunks: Array<Record<string, unknown>> | undefined;
 
   constructor(data: RCANMessageData) {
     if (!data.cmd || data.cmd.trim() === "") {
@@ -154,6 +167,9 @@ export class RCANMessage {
     this.presenceVerified = data.presenceVerified;
     this.proximityMeters = data.proximityMeters;
     this.readOnly = data.readOnly;
+    this.loa = data.loa;
+    this.transportEncoding = data.transportEncoding;
+    this.mediaChunks = data.mediaChunks;
 
     if (this.confidence !== undefined) {
       if (this.confidence < 0 || this.confidence > 1) {
@@ -196,6 +212,9 @@ export class RCANMessage {
     if (this.presenceVerified !== undefined) obj.presenceVerified = this.presenceVerified;
     if (this.proximityMeters !== undefined) obj.proximityMeters = this.proximityMeters;
     if (this.readOnly !== undefined) obj.readOnly = this.readOnly;
+    if (this.loa !== undefined) obj.loa = this.loa;
+    if (this.transportEncoding !== undefined) obj.transportEncoding = this.transportEncoding;
+    if (this.mediaChunks !== undefined) obj.mediaChunks = this.mediaChunks;
     return obj;
   }
 
@@ -242,6 +261,9 @@ export class RCANMessage {
       presenceVerified: obj.presenceVerified as boolean | undefined,
       proximityMeters: obj.proximityMeters as number | undefined,
       readOnly: obj.readOnly as boolean | undefined,
+      loa: obj.loa as number | undefined,
+      transportEncoding: obj.transportEncoding as string | undefined,
+      mediaChunks: obj.mediaChunks as Array<Record<string, unknown>> | undefined,
     });
   }
 }

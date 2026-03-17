@@ -1,5 +1,5 @@
 /**
- * rcan-ts — Official TypeScript SDK for RCAN v1.5
+ * rcan-ts — Official TypeScript SDK for RCAN v1.6
  * Robot Communication and Accountability Network
  *
  * @see https://rcan.dev
@@ -69,7 +69,7 @@ export {
 export type { SafetyMessage, SafetyEvent, TransparencyMessage } from "./safety.js";
 
 // ── v1.5: version ──────────────────────────────────────────────────────────────
-export { SPEC_VERSION, validateVersionCompat } from "./version.js";
+export { SPEC_VERSION, SDK_VERSION, validateVersionCompat } from "./version.js";
 
 // ── v1.5: replay attack prevention (GAP-03) ────────────────────────────────────
 export { ReplayCache, validateReplay } from "./replay.js";
@@ -125,6 +125,50 @@ export type { OfflineState, OfflineCommandResult, CachedKey } from "./offline.js
 export { FaultCode, makeFaultReport } from "./faultReport.js";
 export type { FaultSeverity, FaultReportParams, AuditExportRequest } from "./faultReport.js";
 
-export const VERSION = "0.5.0";
+// ── v1.6: identity & LoA (GAP-14) ─────────────────────────────────────────────
+export {
+  LevelOfAssurance,
+  DEFAULT_LOA_POLICY,
+  PRODUCTION_LOA_POLICY,
+  extractLoaFromJwt,
+  validateLoaForScope,
+} from "./identity.js";
+export type { LoaPolicy } from "./identity.js";
+
+// ── v1.6: federation (GAP-16) ─────────────────────────────────────────────────
+export {
+  RegistryTier,
+  FederationSyncType,
+  TrustAnchorCache,
+  makeFederationSync,
+  validateCrossRegistryCommand,
+} from "./federation.js";
+export type { RegistryIdentity, FederationSyncPayload } from "./federation.js";
+
+// ── v1.6: transport encodings (GAP-17) ────────────────────────────────────────
+export {
+  TransportEncoding,
+  TransportError,
+  encodeCompact,
+  decodeCompact,
+  encodeMinimal,
+  decodeMinimal,
+  encodeBleFrames,
+  decodeBleFrames,
+  selectTransport,
+} from "./transport.js";
+
+// ── v1.6: multi-modal data (GAP-18) ───────────────────────────────────────────
+export {
+  MediaEncoding,
+  addMediaInline,
+  addMediaRef,
+  validateMediaChunks,
+  makeTrainingDataMessage,
+  makeStreamChunk,
+} from "./multimodal.js";
+export type { MediaChunk, StreamChunk } from "./multimodal.js";
+
+export const VERSION = "0.6.0";
 /** @deprecated Use SPEC_VERSION from ./version instead */
-export const RCAN_VERSION = "1.5";
+export const RCAN_VERSION = "1.6";

@@ -1,6 +1,6 @@
 # rcan-ts
 
-Official TypeScript SDK for the **RCAN v1.5** Robot Communication and Addressing Network protocol.
+Official TypeScript SDK for the **RCAN v1.6** Robot Communication and Addressing Network protocol.
 
 [![npm version](https://badge.fury.io/js/%40continuonai%2Frcan-ts.svg)](https://www.npmjs.com/package/@continuonai/rcan-ts)
 [![CI](https://github.com/continuonai/rcan-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/continuonai/rcan-ts/actions)

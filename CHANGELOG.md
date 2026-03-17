@@ -1,3 +1,14 @@
+## [0.6.0] — 2026-03-16
+
+### RCAN v1.6 Support — GAP-14, GAP-16, GAP-17, GAP-18
+
+- **GAP-14**: `src/identity.ts` — `LevelOfAssurance` enum (ANONYMOUS/EMAIL_VERIFIED/HARDWARE_TOKEN), `LoaPolicy`, `extractLoaFromJwt()`, `validateLoaForScope()`, `DEFAULT_LOA_POLICY`, `PRODUCTION_LOA_POLICY`; `loa?` field on `RCANMessage`
+- **GAP-16**: `src/federation.ts` — `RegistryTier`, `FederationSyncType`, `RegistryIdentity`, `FederationSyncPayload`, `TrustAnchorCache` (24h TTL, DNS-TXT discovery, JWT iss validation), `makeFederationSync()`, `validateCrossRegistryCommand()` (P66: ESTOP always permitted)
+- **GAP-17**: `src/transport.ts` — `TransportEncoding` enum, `encodeCompact()`/`decodeCompact()` (abbreviated JSON keys), `encodeMinimal()`/`decodeMinimal()` (32-byte ESTOP-only frame with runtime assertion), `encodeBleFrames()`/`decodeBleFrames()` (MTU fragmentation), `selectTransport()`, `TransportError`; `transportEncoding?` on `RCANMessage`
+- **GAP-18**: `src/multimodal.ts` — `MediaEncoding`, `MediaChunk`, `StreamChunk`, `addMediaInline()` (SHA-256 via Web Crypto), `addMediaRef()`, `validateMediaChunks()`, `makeTrainingDataMessage()`, `makeStreamChunk()`; `mediaChunks?` on `RCANMessage`
+- `src/version.ts`: `SPEC_VERSION = "1.6"`, `SDK_VERSION = "0.6.0"`
+- `package.json`: version bumped to `0.6.0`
+
 ## [0.5.0] — 2026-03-16
 
 ### RCAN v1.5 Support — 18 Gaps Addressed
