@@ -46,10 +46,14 @@ function generateId(): string {
 }
 
 async function computeSha256Hex(data: Uint8Array): Promise<string> {
-  // Copy bytes into a plain ArrayBuffer to satisfy strict TypeScript / Web Crypto typings
+  // Use globalThis.crypto (Node 18+) or fall back to node:crypto webcrypto.
+  // Bare `crypto` is not available in all Jest/Node environments.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const subtle: SubtleCrypto = (globalThis as any).crypto?.subtle
+    ?? (await import('node:crypto' as string)).webcrypto.subtle;
   const ab = new ArrayBuffer(data.byteLength);
   new Uint8Array(ab).set(data);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', ab);
+  const hashBuffer = await subtle.digest('SHA-256', ab);
   const hashArray  = new Uint8Array(hashBuffer);
   return Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
 }
