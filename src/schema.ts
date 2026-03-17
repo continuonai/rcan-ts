@@ -16,6 +16,8 @@ export async function fetchCanonicalSchema(schemaName: string): Promise<object |
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
+    // .unref() prevents the timer from keeping the Node.js event loop alive after tests
+    (timer as unknown as { unref?: () => void }).unref?.();
     const res = await fetch(`${SCHEMA_BASE}/${schemaName}`, { signal: controller.signal });
     clearTimeout(timer);
     if (!res.ok) return null;
