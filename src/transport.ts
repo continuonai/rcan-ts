@@ -124,10 +124,13 @@ const SAFETY_TYPE  = 6;
  */
 async function sha256Bytes(input: string): Promise<Uint8Array> {
   const encoded = new TextEncoder().encode(input);
-  // Copy into a plain ArrayBuffer to satisfy strict TypeScript / Web Crypto typings
   const ab = new ArrayBuffer(encoded.byteLength);
   new Uint8Array(ab).set(encoded);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', ab);
+  // Use globalThis.crypto (Node 18+) or fall back to node:crypto webcrypto
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const subtle: SubtleCrypto = (globalThis as any).crypto?.subtle
+    ?? (await import('node:crypto' as string)).webcrypto.subtle;
+  const hashBuffer = await subtle.digest('SHA-256', ab);
   return new Uint8Array(hashBuffer);
 }
 
