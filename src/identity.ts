@@ -67,15 +67,16 @@ export function extractLoaFromJwt(token: string): LevelOfAssurance {
   return LevelOfAssurance.ANONYMOUS;
 }
 
-type ScopeName = 'discover' | 'status' | 'chat' | 'control' | 'safety';
+type ScopeName = 'discover' | 'status' | 'chat' | 'contribute' | 'control' | 'safety';
 
 function minLoaForScope(scope: string, policy: LoaPolicy): LevelOfAssurance | null {
   const s = scope.toLowerCase() as ScopeName;
   switch (s) {
     case 'discover': return policy.minLoaDiscover;
     case 'status':   return policy.minLoaStatus;
-    case 'chat':     return policy.minLoaChat;
-    case 'control':  return policy.minLoaControl;
+    case 'chat':        return policy.minLoaChat;
+    case 'contribute':  return policy.minLoaChat;  // v1.7: between chat and control
+    case 'control':     return policy.minLoaControl;
     case 'safety':   return policy.minLoaSafety;
     default:         return null;
   }

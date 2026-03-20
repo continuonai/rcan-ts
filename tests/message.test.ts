@@ -1,4 +1,4 @@
-import { RCANMessage, RCANMessageError } from "../src/message";
+import { RCANMessage, RCANMessageError, MessageType } from "../src/message";
 
 const VALID_DATA = {
   rcan: "1.2",
@@ -111,5 +111,17 @@ describe("RCANMessage serialization", () => {
 
   test("fromJSON() throws on missing cmd", () => {
     expect(() => RCANMessage.fromJSON({ rcan: "1.2", target: "rcan://r/a/b/v1/x" } as any)).toThrow();
+  });
+});
+
+describe('v1.7 contribute message types', () => {
+  it('should have CONTRIBUTE_REQUEST = 33', () => {
+    expect(MessageType.CONTRIBUTE_REQUEST).toBe(33);
+  });
+  it('should have CONTRIBUTE_RESULT = 34', () => {
+    expect(MessageType.CONTRIBUTE_RESULT).toBe(34);
+  });
+  it('should have CONTRIBUTE_CANCEL = 35', () => {
+    expect(MessageType.CONTRIBUTE_CANCEL).toBe(35);
   });
 });

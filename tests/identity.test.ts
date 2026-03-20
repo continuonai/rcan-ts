@@ -131,3 +131,10 @@ describe('LevelOfAssurance enum', () => {
   test('EMAIL_VERIFIED = 2', () => expect(LevelOfAssurance.EMAIL_VERIFIED).toBe(2));
   test('HARDWARE_TOKEN = 3', () => expect(LevelOfAssurance.HARDWARE_TOKEN).toBe(3));
 });
+
+describe('v1.7 contribute scope', () => {
+  it('should validate contribute scope at chat LoA level', () => {
+    const result = validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'contribute');
+    expect(result.valid).toBe(true);
+  });
+});

@@ -45,6 +45,11 @@ export enum MessageType {
   UNSUBSCRIBE      = 25,
   FAULT_REPORT     = 26,
   COMMAND_NACK     = 27,
+
+  // v1.7 — Idle compute contribution
+  CONTRIBUTE_REQUEST = 33,
+  CONTRIBUTE_RESULT  = 34,
+  CONTRIBUTE_CANCEL  = 35,
 }
 
 // ── v1.5 SenderType ───────────────────────────────────────────────────────────
