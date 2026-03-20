@@ -17,39 +17,81 @@ import { SPEC_VERSION } from "./version.js";
 // ── v1.5 Canonical MessageType table ─────────────────────────────────────────
 // These integers MUST match rcan-py.
 
+// ═══════════════════════════════════════════════════════════════════
+// v1.8 Canonical MessageType Table
+// This is the SINGLE SOURCE OF TRUTH. Values MUST match rcan-spec §3
+// and rcan-py exactly. See: https://rcan.dev/spec/v1.8
+// ═══════════════════════════════════════════════════════════════════
 export enum MessageType {
-  COMMAND        = 1,
-  RESPONSE       = 2,
-  STATUS         = 3,
-  HEARTBEAT      = 4,
-  CONFIG         = 5,
-  SAFETY         = 6,
-  SENSOR_DATA    = 7,
-  AUDIT          = 8,
-  DISCOVER       = 9,
-  TRAINING_DATA  = 36,  // Moved from 10 to align with rcan-py (avoid CONTRIBUTE_RESULT collision at 34)
-  TRANSPARENCY   = 11,
-  FEDERATION_SYNC = 12,
-  ALERT          = 13,
-  TELEOP         = 14,
-  CHAT           = 15,
-  ERROR          = 16,
-  COMMAND_ACK    = 17,
-  COMMAND_COMMIT = 18,
-  ROBOT_REVOCATION = 19,
-  CONSENT_REQUEST  = 20,
-  CONSENT_GRANT    = 21,
-  CONSENT_DENY     = 22,
-  FLEET_COMMAND    = 23,
-  SUBSCRIBE        = 24,
-  UNSUBSCRIBE      = 25,
-  FAULT_REPORT     = 26,
-  COMMAND_NACK     = 27,
+  // Core protocol (1–8)
+  COMMAND            = 1,
+  RESPONSE           = 2,
+  STATUS             = 3,
+  HEARTBEAT          = 4,
+  CONFIG             = 5,
+  SAFETY             = 6,
+  AUTH               = 7,
+  ERROR              = 8,
 
-  // v1.7 — Idle compute contribution
+  // Discovery & authorization (9–10)
+  DISCOVER           = 9,
+  PENDING_AUTH       = 10,
+
+  // Skill invocation (11–13)
+  INVOKE             = 11,
+  INVOKE_RESULT      = 12,
+  INVOKE_CANCEL      = 13,
+
+  // Registry (14–15)
+  REGISTRY_REGISTER  = 14,
+  REGISTRY_RESOLVE   = 15,
+
+  // Audit & transparency (16)
+  TRANSPARENCY       = 16,  // EU AI Act Art. 13 audit record
+
+  // Acknowledgement & QoS (17–18)
+  COMMAND_ACK        = 17,
+  COMMAND_NACK       = 18,
+
+  // Identity & consent (19–22)
+  ROBOT_REVOCATION   = 19,
+  CONSENT_REQUEST    = 20,
+  CONSENT_GRANT      = 21,
+  CONSENT_DENY       = 22,
+
+  // Fleet & telemetry (23–25)
+  FLEET_COMMAND      = 23,
+  SUBSCRIBE          = 24,
+  UNSUBSCRIBE        = 25,
+
+  // Diagnostics (26–28)
+  FAULT_REPORT       = 26,
+  KEY_ROTATION       = 27,
+  COMMAND_COMMIT     = 28,
+
+  // Sensor & training consent (29–32)
+  SENSOR_DATA        = 29,
+  TRAINING_CONSENT_REQUEST = 30,
+  TRAINING_CONSENT_GRANT   = 31,
+  TRAINING_CONSENT_DENY    = 32,
+
+  // Idle compute contribution — v1.7 (33–35)
   CONTRIBUTE_REQUEST = 33,
   CONTRIBUTE_RESULT  = 34,
   CONTRIBUTE_CANCEL  = 35,
+
+  // Multimodal training data — v1.8 (36)
+  TRAINING_DATA      = 36,
+
+  // ── Deprecated aliases (v1.8) ──────────────────────────────
+  // These map removed types to their canonical replacements.
+  // Will be removed in v2.0.
+  /** @deprecated Use FLEET_COMMAND (23) */
+  FEDERATION_SYNC    = 23,
+  /** @deprecated Use FAULT_REPORT (26) */
+  ALERT              = 26,
+  /** @deprecated Use TRANSPARENCY (16) */
+  AUDIT              = 16,
 }
 
 // ── v1.5 SenderType ───────────────────────────────────────────────────────────
