@@ -27,7 +27,7 @@ export enum MessageType {
   SENSOR_DATA    = 7,
   AUDIT          = 8,
   DISCOVER       = 9,
-  TRAINING_DATA  = 10,
+  TRAINING_DATA  = 36,  // Moved from 10 to align with rcan-py (avoid CONTRIBUTE_RESULT collision at 34)
   TRANSPARENCY   = 11,
   FEDERATION_SYNC = 12,
   ALERT          = 13,
