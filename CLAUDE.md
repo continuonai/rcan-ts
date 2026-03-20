@@ -4,42 +4,74 @@
 
 ## What Is rcan-ts?
 
-`rcan-ts` is the official TypeScript/JavaScript SDK for the RCAN protocol.
+`rcan-ts` is the official TypeScript SDK for the RCAN robot communication protocol. It provides:
+- `RCANMessage` — create, validate, and serialize RCAN messages
+- `RobotURI` — parse and validate `rcan://` URIs
+- `MessageType` enum — all 35+ RCAN message type codes
+- `validateLoaForScope()` — Level of Assurance policy enforcement
+- Federation, consent, multimodal, replay, and delegation support
 
-**Version**: 0.6.0 | **RCAN Spec**: v1.6.1 | **Node**: 18+ | **Package**: @continuonai/rcan
-
-## Ecosystem Versions
-
-- **RCAN spec**: v1.6.1 (primary compliance reference) — rcan.dev
-- **OpenCastor runtime**: 2026.3.17.13 (yyyy.month.day.iteration)
-- **rcan-py**: 0.6.0 (Python counterpart SDK)
-
-## SPEC_VERSION
-
-Defined in `src/version.ts`. Must always match `rcan-spec/package.json` version field.
-Current: `"1.6.1"` — update whenever rcan-spec releases a new version.
+**Version**: 0.6.0 | **Spec**: RCAN v1.6.1 | **Runtime**: Node.js 18+ | **Tests**: 409 passing
 
 ## Repository Layout
 
 ```
 rcan-ts/
 ├── src/
-│   ├── index.ts           # Public exports
-│   ├── version.ts         # SPEC_VERSION, SDK_VERSION — keep in sync with rcan-spec
-│   ├── message.ts         # RCANMessage, MessageType
-│   ├── uri.ts             # RobotURI parsing
-│   ├── transport.ts       # Minimal transport encoding (encode_minimal / decode_minimal)
-│   └── registry.ts        # RegistryClient
+│   ├── message.ts      # RCANMessage class, MessageType enum, validation
+│   ├── identity.ts     # LevelOfAssurance, LoaPolicy, validateLoaForScope
+│   ├── version.ts      # SPEC_VERSION = "1.6.1", SDK_VERSION = "0.6.0"
+│   ├── uri.ts          # RobotURI — parse/validate rcan:// URIs
+│   ├── federation.ts   # Federation sync and peer validation
+│   ├── consent.ts      # Cross-robot consent protocol
+│   ├── multimodal.ts   # Multimodal message support
+│   ├── replay.ts       # Replay protection
+│   └── index.ts        # Public exports
 ├── tests/
-└── package.json           # version = SDK version (semver)
+│   ├── message.test.ts    # Message creation, validation, MessageType values
+│   ├── identity.test.ts   # LoA enforcement, scope validation
+│   ├── federation.test.ts # Federation protocol tests
+│   └── ...                # 25 test suites
+├── package.json        # version: "0.6.0"
+└── tsconfig.json
 ```
 
-## Key Rules
+## Key Constants
 
-- SPEC_VERSION in version.ts must match rcan-spec/package.json version
-- SDK version (package.json) follows semver independently
-- transport.ts encode_minimal() accepts optional sharedSecret: Uint8Array — always pass it in production (using msg_id as HMAC key is deprecated)
+```typescript
+import { MessageType, SPEC_VERSION, SDK_VERSION } from 'rcan';
 
-## CI
+SPEC_VERSION  // "1.6.1" — tracks current stable spec version
+SDK_VERSION   // "0.6.0"
+```
 
-GitHub Actions (SHA-pinned). Run: `npm test`
+## Running Tests
+
+```bash
+npm install
+npm test        # 409 tests across 25 suites
+```
+
+## MessageType Enum
+
+Integers MUST match rcan-py. Current range: 1–35.
+
+Notable v1.7 additions:
+- `CONTRIBUTE_REQUEST = 33` — coordinator → robot: deliver work unit
+- `CONTRIBUTE_RESULT = 34` — robot → coordinator: return results
+- `CONTRIBUTE_CANCEL = 35` — robot → coordinator: cancellation notice
+
+## Scope Validation
+
+`validateLoaForScope()` maps scope names to LoA requirements:
+- `discover`, `status` → `minLoaDiscover` / `minLoaStatus`
+- `chat`, `contribute` → `minLoaChat` (contribute is between chat and control)
+- `control` → `minLoaControl`
+- `safety` → `minLoaSafety`
+
+## Code Style
+
+- Strict TypeScript — no `any` in public APIs
+- All exports from `src/index.ts`
+- Tests use Jest with ts-jest
+- No runtime dependencies beyond built-in Node.js modules
