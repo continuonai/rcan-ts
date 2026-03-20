@@ -11,7 +11,7 @@
 - `validateLoaForScope()` — Level of Assurance policy enforcement
 - Federation, consent, multimodal, replay, and delegation support
 
-**Version**: 0.6.0 | **Spec**: RCAN v1.6.1 | **Runtime**: Node.js 18+ | **Tests**: 409 passing
+**Version**: 0.6.0 | **Spec**: RCAN v1.8.0 | **Runtime**: Node.js 18+ | **Tests**: 447 passing
 
 ## Repository Layout
 
