@@ -172,3 +172,6 @@ export type { MediaChunk, StreamChunk } from "./multimodal.js";
 export const VERSION = "0.6.0";
 /** @deprecated Use SPEC_VERSION from ./version instead */
 export const RCAN_VERSION = "1.6";
+
+export { makeContributeRequest, makeContributeResult, makeContributeCancel, validateContributeScope, isPreemptedBy, CONTRIBUTE_SCOPE_LEVEL } from "./contribute";
+export type { ContributeRequest, ContributeResult, ContributeCancel, WorkUnitStatus, ComputeResource } from "./contribute";
