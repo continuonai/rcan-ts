@@ -9,7 +9,7 @@
  */
 
 import { RCANMessage, MessageType } from './message.js';
-import { LevelOfAssurance, extractLoaFromJwt } from './identity.js';
+import { Role, LevelOfAssurance, extractLoaFromJwt } from './identity.js';
 
 // ── Enums & interfaces ────────────────────────────────────────────────────────
 
@@ -198,12 +198,12 @@ export function makeFederationSync(
   payload:  FederationSyncPayload,
 ): RCANMessage {
   return new RCANMessage({
-    rcan:        '1.6',
-    rcanVersion: '1.6',
+    rcan:        '2.1.0',
+    rcanVersion: '2.1.0',
     cmd:         'federation_sync',
     target,
     params: {
-      msg_type:        MessageType.FEDERATION_SYNC,
+      msg_type:        MessageType.FLEET_COMMAND,
       msg_id:          generateId(),
       source_registry: source,
       target_registry: target,
@@ -260,7 +260,7 @@ export async function validateCrossRegistryCommand(
   }
 
   // Check LoA — prefer JWT in params, fall back to message loa field
-  let loa: LevelOfAssurance = LevelOfAssurance.ANONYMOUS;
+  let loa: LevelOfAssurance = Role.GUEST;
   const registryJwt = msg.params?.['registry_jwt'] as string | undefined;
   if (registryJwt) {
     loa = extractLoaFromJwt(registryJwt);
@@ -268,10 +268,10 @@ export async function validateCrossRegistryCommand(
     loa = msg.loa as LevelOfAssurance;
   }
 
-  if (loa < LevelOfAssurance.EMAIL_VERIFIED) {
+  if (loa < Role.OPERATOR) {
     return {
       valid:  false,
-      reason: `LOA_INSUFFICIENT: cross-registry commands require LoA>=2 (EMAIL_VERIFIED), got LoA=${loa}`,
+      reason: `LOA_INSUFFICIENT: cross-registry commands require LoA>=2 (OPERATOR), got role=${loa}`,
     };
   }
 

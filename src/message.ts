@@ -89,15 +89,16 @@ export enum MessageType {
   SEASON_STANDING            = 39,
   PERSONAL_RESEARCH_RESULT   = 40,
 
-  // ── Deprecated aliases (v1.8) ──────────────────────────────
-  // These map removed types to their canonical replacements.
-  // Will be removed in v2.0.
-  /** @deprecated Use FLEET_COMMAND (23) */
-  FEDERATION_SYNC    = 23,
-  /** @deprecated Use FAULT_REPORT (26) */
-  ALERT              = 26,
-  /** @deprecated Use TRANSPARENCY (16) */
-  AUDIT              = 16,
+  // ── Authority & attestation — v2.1 (41–44) ──────────────────
+  /** authority → robot: EU AI Act Art. 16(j) audit data request */
+  AUTHORITY_ACCESS           = 41,
+  /** robot → authority: audit data response */
+  AUTHORITY_RESPONSE         = 42,
+  /** robot → RRF: publish signed firmware manifest */
+  FIRMWARE_ATTESTATION       = 43,
+  /** robot → RRF: publish updated CycloneDX SBOM */
+  SBOM_UPDATE                = 44,
+  // FEDERATION_SYNC, ALERT, AUDIT aliases removed in v2.1
 }
 
 // ── v1.5 SenderType ───────────────────────────────────────────────────────────
@@ -155,6 +156,10 @@ export interface RCANMessageData {
   /** v1.6: GAP-18 multi-modal media chunks */
   // typed as unknown[] to avoid circular dependency with multimodal.ts
   mediaChunks?: Array<Record<string, unknown>>;
+  /** v2.1: SHA-256 of sender's firmware manifest (envelope field 13). Required at L2+. */
+  firmwareHash?: string;
+  /** v2.1: URI to sender's SBOM attestation endpoint (envelope field 14). Required at L2+. */
+  attestationRef?: string;
   [key: string]: unknown;
 }
 
@@ -192,6 +197,10 @@ export class RCANMessage {
   readonly transportEncoding: string | undefined;
   /** v1.6: GAP-18 multi-modal media chunks */
   readonly mediaChunks: Array<Record<string, unknown>> | undefined;
+  /** v2.1: SHA-256 of sender's firmware manifest */
+  readonly firmwareHash: string | undefined;
+  /** v2.1: URI to sender's SBOM attestation endpoint */
+  readonly attestationRef: string | undefined;
 
   constructor(data: RCANMessageData) {
     if (!data.cmd || data.cmd.trim() === "") {
@@ -223,6 +232,18 @@ export class RCANMessage {
     this.loa = data.loa;
     this.transportEncoding = data.transportEncoding;
     this.mediaChunks = data.mediaChunks;
+    this.firmwareHash = data.firmwareHash;
+    this.attestationRef = data.attestationRef;
+
+    // v2.1: hard-reject signature blocks with sig:'pending' (removed legacy pattern)
+    if (
+      this.signature !== undefined &&
+      (this.signature as unknown as Record<string, unknown>)['sig'] === 'pending'
+    ) {
+      throw new RCANMessageError(
+        "signature.sig:'pending' is not valid in RCAN v2.1. Sign the message before sending."
+      );
+    }
 
     if (this.confidence !== undefined) {
       if (this.confidence < 0 || this.confidence > 1) {
@@ -268,6 +289,8 @@ export class RCANMessage {
     if (this.loa !== undefined) obj.loa = this.loa;
     if (this.transportEncoding !== undefined) obj.transportEncoding = this.transportEncoding;
     if (this.mediaChunks !== undefined) obj.mediaChunks = this.mediaChunks;
+    if (this.firmwareHash !== undefined) obj.firmwareHash = this.firmwareHash;
+    if (this.attestationRef !== undefined) obj.attestationRef = this.attestationRef;
     return obj;
   }
 
@@ -317,6 +340,8 @@ export class RCANMessage {
       loa: obj.loa as number | undefined,
       transportEncoding: obj.transportEncoding as string | undefined,
       mediaChunks: obj.mediaChunks as Array<Record<string, unknown>> | undefined,
+      firmwareHash: obj.firmwareHash as string | undefined,
+      attestationRef: obj.attestationRef as string | undefined,
     });
   }
 }

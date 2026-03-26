@@ -12,7 +12,7 @@ import {
   type FederationSyncPayload,
 } from '../src/federation.js';
 import { RCANMessage, MessageType } from '../src/message.js';
-import { LevelOfAssurance } from '../src/identity.js';
+import { Role, LevelOfAssurance } from '../src/identity.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -139,7 +139,7 @@ describe('makeFederationSync', () => {
     );
     expect(msg).toBeInstanceOf(RCANMessage);
     expect(msg.cmd).toBe('federation_sync');
-    expect(msg.params?.['msg_type']).toBe(MessageType.FEDERATION_SYNC);
+    expect(msg.params?.['msg_type']).toBe(MessageType.FLEET_COMMAND);
     expect(msg.params?.['source_registry']).toBe('https://source.example.com');
     expect(msg.params?.['sync_type']).toBe(FederationSyncType.CONSENT);
   });
@@ -224,7 +224,7 @@ describe('validateCrossRegistryCommand', () => {
     const baseMsg = makeMsg({ msg_type: 1, source_registry: REMOTE });
     const msgWithLoa = RCANMessage.fromJSON({
       ...baseMsg.toJSON(),
-      loa: LevelOfAssurance.EMAIL_VERIFIED,
+      loa: Role.OPERATOR,
     } as Record<string, unknown>);
     const result = await validateCrossRegistryCommand(msgWithLoa, LOCAL, cache);
     expect(result.valid).toBe(true);

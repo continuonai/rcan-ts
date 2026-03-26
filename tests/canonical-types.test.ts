@@ -49,9 +49,14 @@ const CANONICAL_TABLE: Record<string, number> = {
   COMPETITION_SCORE: 38,
   SEASON_STANDING: 39,
   PERSONAL_RESEARCH_RESULT: 40,
+  // Authority & attestation — v2.1 (41–44)
+  AUTHORITY_ACCESS:           41,
+  AUTHORITY_RESPONSE:         42,
+  FIRMWARE_ATTESTATION:       43,
+  SBOM_UPDATE:                44,
 };
 
-describe("v1.10 Canonical MessageType Table", () => {
+describe("v2.1 Canonical MessageType Table", () => {
   test.each(Object.entries(CANONICAL_TABLE))(
     "MessageType.%s should equal %i",
     (name, expected) => {
@@ -61,30 +66,32 @@ describe("v1.10 Canonical MessageType Table", () => {
     }
   );
 
-  test("should have all 40 canonical types", () => {
+  test("should have all 44 canonical types", () => {
     for (const name of Object.keys(CANONICAL_TABLE)) {
       expect(MessageType).toHaveProperty(name);
     }
   });
 
-  test("should not have duplicate values (excluding deprecated aliases)", () => {
+  test("should not have duplicate values (v2.1 aliases removed)", () => {
     const seen = new Map<number, string>();
-    // Deprecated aliases that intentionally share values
-    const deprecatedAliases = new Set([
-      "FEDERATION_SYNC",
-      "ALERT",
-      "AUDIT",
-    ]);
-
     for (const [name, value] of Object.entries(MessageType)) {
       if (typeof value !== "number") continue;
-      if (deprecatedAliases.has(name)) continue;
       if (seen.has(value)) {
-        throw new Error(
-          `Duplicate value ${value}: ${seen.get(value)} and ${name}`
-        );
+        throw new Error(`Duplicate value ${value}: ${seen.get(value)} and ${name}`);
       }
       seen.set(value, name);
     }
+  });
+
+  test("FEDERATION_SYNC alias is removed in v2.1", () => {
+    expect((MessageType as Record<string, unknown>)['FEDERATION_SYNC']).toBeUndefined();
+  });
+
+  test("ALERT alias is removed in v2.1", () => {
+    expect((MessageType as Record<string, unknown>)['ALERT']).toBeUndefined();
+  });
+
+  test("AUDIT alias is removed in v2.1", () => {
+    expect((MessageType as Record<string, unknown>)['AUDIT']).toBeUndefined();
   });
 });

@@ -9,7 +9,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const PKG_VERSION: string = "0.1.0"; // keep in sync with package.json
+const PKG_VERSION: string = "1.1.0"; // keep in sync with package.json
 
 interface SpecVersion {
   version: string;

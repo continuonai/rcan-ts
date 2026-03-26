@@ -6,16 +6,15 @@
  */
 
 /** The RCAN spec version this SDK implements. */
-export const SPEC_VERSION = "1.10.0";
+export const SPEC_VERSION = "2.1.0";
 
 /** The SDK release version. */
-export const SDK_VERSION = "0.9.0";
+export const SDK_VERSION = "1.1.0";
 
 /**
  * Validate version compatibility.
  *
- * A receiver MUST accept messages from senders with the same MAJOR version
- * and lower-or-equal MINOR version. MAJOR mismatch → incompatible.
+ * MAJOR must match. Lower-or-equal MINOR is acceptable.
  *
  * @param incomingVersion - The rcanVersion from the incoming message
  * @param localVersion    - The local SPEC_VERSION (defaults to SPEC_VERSION)

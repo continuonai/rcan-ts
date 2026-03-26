@@ -1,140 +1,245 @@
 /**
- * Tests for src/identity.ts — GAP-14: Level of Assurance
+ * Tests for rcan/identity — RCAN v2.1 RBAC (§2).
  */
 
 import {
+  Role,
   LevelOfAssurance,
+  ROLE_JWT_LEVEL,
+  SCOPE_MIN_ROLE,
+  roleFromJwtLevel,
   DEFAULT_LOA_POLICY,
   PRODUCTION_LOA_POLICY,
+  extractRoleFromJwt,
   extractLoaFromJwt,
+  extractIdentityFromJwt,
+  validateRoleForScope,
   validateLoaForScope,
 } from '../src/identity.js';
 
-// Helper: create a minimal JWT with a given payload
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function makeJwt(payload: Record<string, unknown>): string {
-  const header  = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
-  const body    = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const header = btoa(JSON.stringify({ alg: 'EdDSA', typ: 'JWT' }))
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const body = btoa(JSON.stringify(payload))
+    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   return `${header}.${body}.fakesig`;
 }
 
-// ── extractLoaFromJwt ─────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Role enum
+// ---------------------------------------------------------------------------
 
-describe('extractLoaFromJwt', () => {
-  test('returns ANONYMOUS for empty token', () => {
-    expect(extractLoaFromJwt('')).toBe(LevelOfAssurance.ANONYMOUS);
+describe('Role', () => {
+  test('values', () => {
+    expect(Role.GUEST).toBe(1);
+    expect(Role.OPERATOR).toBe(2);
+    expect(Role.CONTRIBUTOR).toBe(3);
+    expect(Role.ADMIN).toBe(4);
+    expect(Role.M2M_PEER).toBe(5);
+    expect(Role.CREATOR).toBe(6);
+    expect(Role.M2M_TRUSTED).toBe(7);
   });
 
-  test('returns ANONYMOUS for malformed token', () => {
-    expect(extractLoaFromJwt('not.a.jwt')).toBe(LevelOfAssurance.ANONYMOUS);
+  test('LevelOfAssurance is alias for Role', () => {
+    expect(LevelOfAssurance).toBe(Role);
+    expect(LevelOfAssurance.GUEST).toBe(Role.GUEST);
   });
 
-  test('returns ANONYMOUS when loa claim is absent', () => {
-    const token = makeJwt({ sub: 'user123' });
-    expect(extractLoaFromJwt(token)).toBe(LevelOfAssurance.ANONYMOUS);
-  });
-
-  test('returns ANONYMOUS (1) when loa=1', () => {
-    const token = makeJwt({ loa: 1 });
-    expect(extractLoaFromJwt(token)).toBe(LevelOfAssurance.ANONYMOUS);
-  });
-
-  test('returns EMAIL_VERIFIED (2) when loa=2', () => {
-    const token = makeJwt({ loa: 2 });
-    expect(extractLoaFromJwt(token)).toBe(LevelOfAssurance.EMAIL_VERIFIED);
-  });
-
-  test('returns HARDWARE_TOKEN (3) when loa=3', () => {
-    const token = makeJwt({ loa: 3 });
-    expect(extractLoaFromJwt(token)).toBe(LevelOfAssurance.HARDWARE_TOKEN);
-  });
-
-  test('returns ANONYMOUS for out-of-range loa=99', () => {
-    const token = makeJwt({ loa: 99 });
-    expect(extractLoaFromJwt(token)).toBe(LevelOfAssurance.ANONYMOUS);
-  });
-
-  test('returns ANONYMOUS for non-numeric loa', () => {
-    const token = makeJwt({ loa: 'high' });
-    expect(extractLoaFromJwt(token)).toBe(LevelOfAssurance.ANONYMOUS);
+  test('ordering is correct', () => {
+    expect(Role.GUEST < Role.OPERATOR).toBe(true);
+    expect(Role.OPERATOR < Role.CONTRIBUTOR).toBe(true);
+    expect(Role.ADMIN < Role.M2M_PEER).toBe(true);
+    expect(Role.CREATOR < Role.M2M_TRUSTED).toBe(true);
   });
 });
 
-// ── validateLoaForScope ───────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// JWT level mapping
+// ---------------------------------------------------------------------------
 
-describe('validateLoaForScope — DEFAULT_LOA_POLICY', () => {
-  const scopes = ['discover', 'status', 'chat', 'control', 'safety'];
+describe('roleFromJwtLevel', () => {
+  test('maps 1.0 → GUEST',       () => expect(roleFromJwtLevel(1.0)).toBe(Role.GUEST));
+  test('maps 2.0 → OPERATOR',    () => expect(roleFromJwtLevel(2.0)).toBe(Role.OPERATOR));
+  test('maps 2.5 → CONTRIBUTOR', () => expect(roleFromJwtLevel(2.5)).toBe(Role.CONTRIBUTOR));
+  test('maps 3.0 → ADMIN',       () => expect(roleFromJwtLevel(3.0)).toBe(Role.ADMIN));
+  test('maps 4.0 → M2M_PEER',    () => expect(roleFromJwtLevel(4.0)).toBe(Role.M2M_PEER));
+  test('maps 5.0 → CREATOR',     () => expect(roleFromJwtLevel(5.0)).toBe(Role.CREATOR));
+  test('maps 6.0 → M2M_TRUSTED', () => expect(roleFromJwtLevel(6.0)).toBe(Role.M2M_TRUSTED));
+  test('unknown level → undefined', () => expect(roleFromJwtLevel(99)).toBeUndefined());
+});
 
-  test.each(scopes)('ANONYMOUS passes %s with default policy', (scope) => {
-    const result = validateLoaForScope(LevelOfAssurance.ANONYMOUS, scope, DEFAULT_LOA_POLICY);
-    expect(result.valid).toBe(true);
+describe('ROLE_JWT_LEVEL', () => {
+  test('CONTRIBUTOR maps to 2.5', () => expect(ROLE_JWT_LEVEL[Role.CONTRIBUTOR]).toBe(2.5));
+  test('CREATOR maps to 5.0',     () => expect(ROLE_JWT_LEVEL[Role.CREATOR]).toBe(5.0));
+  test('M2M_TRUSTED maps to 6.0', () => expect(ROLE_JWT_LEVEL[Role.M2M_TRUSTED]).toBe(6.0));
+});
+
+// ---------------------------------------------------------------------------
+// extractRoleFromJwt
+// ---------------------------------------------------------------------------
+
+describe('extractRoleFromJwt', () => {
+  test('returns GUEST for empty token', () => {
+    expect(extractRoleFromJwt('')).toBe(Role.GUEST);
   });
 
-  test('unknown scope is allowed by default', () => {
-    const result = validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'custom_scope');
-    expect(result.valid).toBe(true);
+  test('returns GUEST for malformed token', () => {
+    expect(extractRoleFromJwt('not.a.jwt')).toBe(Role.GUEST);
+  });
+
+  test('returns GUEST when no role claim', () => {
+    const token = makeJwt({ sub: 'u', exp: Date.now() / 1000 + 3600 });
+    expect(extractRoleFromJwt(token)).toBe(Role.GUEST);
+  });
+
+  test.each([
+    [1,   Role.GUEST],
+    [2,   Role.OPERATOR],
+    [2.5, Role.CONTRIBUTOR],
+    [3,   Role.ADMIN],
+    [4,   Role.M2M_PEER],
+    [5,   Role.CREATOR],
+    [6,   Role.M2M_TRUSTED],
+  ] as [number, Role][])('rcan_role=%s → %s', (level, expected) => {
+    const token = makeJwt({ sub: 'u', rcan_role: level });
+    expect(extractRoleFromJwt(token)).toBe(expected);
+  });
+
+  test('v1.x loa fallback: loa=1 → GUEST', () => {
+    const token = makeJwt({ sub: 'u', loa: 1 });
+    expect(extractRoleFromJwt(token)).toBe(Role.GUEST);
+  });
+
+  test('backward-compat alias extractLoaFromJwt works', () => {
+    const token = makeJwt({ sub: 'u', rcan_role: 3 });
+    expect(extractLoaFromJwt(token)).toBe(Role.ADMIN);
   });
 });
 
-describe('validateLoaForScope — PRODUCTION_LOA_POLICY', () => {
-  test('ANONYMOUS can discover and check status', () => {
-    expect(validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'discover', PRODUCTION_LOA_POLICY).valid).toBe(true);
-    expect(validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'status',   PRODUCTION_LOA_POLICY).valid).toBe(true);
-    expect(validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'chat',     PRODUCTION_LOA_POLICY).valid).toBe(true);
+// ---------------------------------------------------------------------------
+// extractIdentityFromJwt
+// ---------------------------------------------------------------------------
+
+describe('extractIdentityFromJwt', () => {
+  test('parses M2M_PEER token', () => {
+    const token = makeJwt({
+      sub:          'RRN-000000000005',
+      rcan_role:    4,
+      rcan_scopes:  ['control', 'status'],
+      peer_rrn:     'RRN-000000000001',
+    });
+    const identity = extractIdentityFromJwt(token);
+    expect(identity.sub).toBe('RRN-000000000005');
+    expect(identity.role).toBe(Role.M2M_PEER);
+    expect(identity.scopes).toContain('control');
+    expect(identity.peerRrn).toBe('RRN-000000000001');
   });
 
-  test('ANONYMOUS is blocked from control', () => {
-    const result = validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'control', PRODUCTION_LOA_POLICY);
-    expect(result.valid).toBe(false);
-    expect(result.reason).toContain('LOA_INSUFFICIENT');
+  test('parses M2M_TRUSTED token', () => {
+    const token = makeJwt({
+      sub:         'orchestrator:fleet-brain',
+      rcan_role:   6,
+      rcan_scopes: ['fleet.trusted'],
+      fleet_rrns:  ['RRN-000000000001', 'RRN-000000000005'],
+    });
+    const identity = extractIdentityFromJwt(token);
+    expect(identity.role).toBe(Role.M2M_TRUSTED);
+    expect(identity.fleetRrns).toHaveLength(2);
   });
 
-  test('ANONYMOUS is blocked from safety', () => {
-    const result = validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'safety', PRODUCTION_LOA_POLICY);
-    expect(result.valid).toBe(false);
-    expect(result.reason).toContain('LOA_INSUFFICIENT');
+  test('malformed token returns GUEST identity', () => {
+    const identity = extractIdentityFromJwt('bad');
+    expect(identity.role).toBe(Role.GUEST);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateRoleForScope
+// ---------------------------------------------------------------------------
+
+const READ_SCOPES = ['status', 'discover', 'chat', 'observer'] as const;
+const CONTROL_SCOPES = ['control', 'teleop'] as const;
+
+describe('validateRoleForScope', () => {
+  test.each(READ_SCOPES)('GUEST passes %s', (scope) => {
+    expect(validateRoleForScope(Role.GUEST, scope).ok).toBe(true);
   });
 
-  test('EMAIL_VERIFIED can control', () => {
-    const result = validateLoaForScope(LevelOfAssurance.EMAIL_VERIFIED, 'control', PRODUCTION_LOA_POLICY);
-    expect(result.valid).toBe(true);
+  test.each(CONTROL_SCOPES)('GUEST fails %s', (scope) => {
+    expect(validateRoleForScope(Role.GUEST, scope).ok).toBe(false);
   });
 
-  test('EMAIL_VERIFIED is blocked from safety', () => {
-    const result = validateLoaForScope(LevelOfAssurance.EMAIL_VERIFIED, 'safety', PRODUCTION_LOA_POLICY);
-    expect(result.valid).toBe(false);
+  test.each(CONTROL_SCOPES)('OPERATOR passes %s', (scope) => {
+    expect(validateRoleForScope(Role.OPERATOR, scope).ok).toBe(true);
   });
 
-  test('HARDWARE_TOKEN can do anything', () => {
-    const scopes = ['discover', 'status', 'chat', 'control', 'safety'];
-    for (const scope of scopes) {
-      expect(validateLoaForScope(LevelOfAssurance.HARDWARE_TOKEN, scope, PRODUCTION_LOA_POLICY).valid).toBe(true);
+  test('CONTRIBUTOR passes contribute', () => {
+    expect(validateRoleForScope(Role.CONTRIBUTOR, 'contribute').ok).toBe(true);
+  });
+
+  test('OPERATOR fails config', () => {
+    expect(validateRoleForScope(Role.OPERATOR, 'config').ok).toBe(false);
+  });
+
+  test('ADMIN passes config', () => {
+    expect(validateRoleForScope(Role.ADMIN, 'config').ok).toBe(true);
+  });
+
+  test('CREATOR passes admin', () => {
+    expect(validateRoleForScope(Role.CREATOR, 'admin').ok).toBe(true);
+  });
+
+  test('M2M_TRUSTED passes fleet.trusted', () => {
+    expect(validateRoleForScope(Role.M2M_TRUSTED, 'fleet.trusted').ok).toBe(true);
+  });
+
+  test('CREATOR fails fleet.trusted (must be M2M_TRUSTED)', () => {
+    expect(validateRoleForScope(Role.CREATOR, 'fleet.trusted').ok).toBe(false);
+  });
+
+  test('reason is empty on success', () => {
+    const result = validateRoleForScope(Role.ADMIN, 'config');
+    expect(result.reason).toBe('');
+  });
+
+  test('reason mentions scope on failure', () => {
+    const result = validateRoleForScope(Role.GUEST, 'config');
+    expect(result.reason.toLowerCase()).toContain('config');
+  });
+
+  test('unknown scope applies OPERATOR minimum', () => {
+    expect(validateRoleForScope(Role.GUEST, 'some_custom_scope').ok).toBe(false);
+    expect(validateRoleForScope(Role.OPERATOR, 'some_custom_scope').ok).toBe(true);
+  });
+
+  test('backward-compat alias validateLoaForScope works', () => {
+    expect(validateLoaForScope(Role.ADMIN, 'config').ok).toBe(true);
+  });
+
+  test('M2M_TRUSTED passes every defined scope', () => {
+    for (const scope of Object.keys(SCOPE_MIN_ROLE)) {
+      expect(validateRoleForScope(Role.M2M_TRUSTED, scope).ok).toBe(true);
     }
   });
 });
 
-describe('validateLoaForScope — policy override', () => {
-  test('custom policy is respected', () => {
-    const customPolicy = {
-      ...DEFAULT_LOA_POLICY,
-      minLoaChat: LevelOfAssurance.EMAIL_VERIFIED,
-    };
-    const result = validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'chat', customPolicy);
-    expect(result.valid).toBe(false);
-    expect(result.reason).toContain('LOA_INSUFFICIENT');
+// ---------------------------------------------------------------------------
+// LoaPolicy
+// ---------------------------------------------------------------------------
+
+describe('LoaPolicy', () => {
+  test('DEFAULT_LOA_POLICY — all GUEST', () => {
+    expect(DEFAULT_LOA_POLICY.minRoleForDiscover).toBe(Role.GUEST);
+    expect(DEFAULT_LOA_POLICY.minRoleForControl).toBe(Role.GUEST);
+    expect(DEFAULT_LOA_POLICY.minRoleForSafety).toBe(Role.GUEST);
   });
-});
 
-// ── LevelOfAssurance enum values ──────────────────────────────────────────────
-
-describe('LevelOfAssurance enum', () => {
-  test('ANONYMOUS = 1', () => expect(LevelOfAssurance.ANONYMOUS).toBe(1));
-  test('EMAIL_VERIFIED = 2', () => expect(LevelOfAssurance.EMAIL_VERIFIED).toBe(2));
-  test('HARDWARE_TOKEN = 3', () => expect(LevelOfAssurance.HARDWARE_TOKEN).toBe(3));
-});
-
-describe('v1.7 contribute scope', () => {
-  it('should validate contribute scope at chat LoA level', () => {
-    const result = validateLoaForScope(LevelOfAssurance.ANONYMOUS, 'contribute');
-    expect(result.valid).toBe(true);
+  test('PRODUCTION_LOA_POLICY — control=OPERATOR, safety=CREATOR', () => {
+    expect(PRODUCTION_LOA_POLICY.minRoleForControl).toBe(Role.OPERATOR);
+    expect(PRODUCTION_LOA_POLICY.minRoleForSafety).toBe(Role.CREATOR);
   });
 });

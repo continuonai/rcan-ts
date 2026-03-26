@@ -125,15 +125,22 @@ export type { OfflineState, OfflineCommandResult, CachedKey } from "./offline.js
 export { FaultCode, makeFaultReport } from "./faultReport.js";
 export type { FaultSeverity, FaultReportParams, AuditExportRequest } from "./faultReport.js";
 
-// ── v1.6: identity & LoA (GAP-14) ─────────────────────────────────────────────
+// ── v1.6 / v2.1: identity, roles & LoA (§2 RBAC) ─────────────────────────────
 export {
-  LevelOfAssurance,
+  Role,
+  LevelOfAssurance,           // backward-compat alias for Role
+  ROLE_JWT_LEVEL,
+  SCOPE_MIN_ROLE,
+  roleFromJwtLevel,
   DEFAULT_LOA_POLICY,
   PRODUCTION_LOA_POLICY,
-  extractLoaFromJwt,
+  extractRoleFromJwt,
+  extractLoaFromJwt,          // backward-compat alias
+  extractIdentityFromJwt,
+  validateRoleForScope,
   validateLoaForScope,
 } from "./identity.js";
-export type { LoaPolicy } from "./identity.js";
+export type { LoaPolicy, IdentityRecord, ScopeValidationResult } from "./identity.js";
 
 // ── v1.6: federation (GAP-16) ─────────────────────────────────────────────────
 export {
@@ -196,3 +203,49 @@ export type {
   SeasonStanding,
   PersonalResearchResult,
 } from "./competition.js";
+
+// ── v2.1: Firmware Manifests (§11) ───────────────────────────────────────────
+export {
+  FIRMWARE_MANIFEST_PATH,
+  FirmwareIntegrityError,
+  manifestToWire,
+  manifestFromWire,
+  canonicalManifestJson,
+  validateManifest,
+} from "./firmware.js";
+export type {
+  FirmwareComponent,
+  FirmwareManifest,
+  FirmwareManifestWire,
+} from "./firmware.js";
+
+// ── v2.1: Authority Access (§13 / EU AI Act §16) ────────────────────────────
+export {
+  AUTHORITY_ERROR_CODES,
+  authorityAccessToWire,
+  authorityAccessFromWire,
+  validateAuthorityAccess,
+  isAuthorityRequestValid,
+} from "./authority.js";
+export type {
+  AuthorityDataCategory,
+  AuthorityAccessPayload,
+  AuthorityAccessPayloadWire,
+  AuthorityResponsePayload,
+  AuthorityResponseData,
+} from "./authority.js";
+
+// ── v2.1: M2M Authorization (§2.8–§2.9) ────────────────────────────────────
+export {
+  M2MAuthError,
+  M2M_TRUSTED_ISSUER,
+  RRF_REVOCATION_URL,
+  RRF_REVOCATION_CACHE_TTL_MS,
+  parseM2mPeerToken,
+  parseM2mTrustedToken,
+  verifyM2mTrustedTokenClaims,
+  verifyM2mTrustedToken,
+  isM2mTrustedRevoked,
+  fetchRRFRevocations,
+} from "./m2m.js";
+export type { M2MPeerClaims, M2MTrustedClaims } from "./m2m.js";
