@@ -1,12 +1,12 @@
 /**
- * Cross-SDK canonical MessageType verification (v1.8).
+ * Cross-SDK canonical MessageType verification (v1.10).
  *
- * This test ensures rcan-ts MessageType values match the v1.8 canonical table
+ * This test ensures rcan-ts MessageType values match the v1.10 canonical table
  * exactly. Any drift from the spec will fail CI immediately.
  */
 import { MessageType } from "../src/message";
 
-// v1.8 canonical table — single source of truth from rcan-spec §3
+// v1.10 canonical table — single source of truth from rcan-spec §3
 const CANONICAL_TABLE: Record<string, number> = {
   COMMAND: 1,
   RESPONSE: 2,
@@ -44,9 +44,14 @@ const CANONICAL_TABLE: Record<string, number> = {
   CONTRIBUTE_RESULT: 34,
   CONTRIBUTE_CANCEL: 35,
   TRAINING_DATA: 36,
+  // v1.10 — Competition protocol
+  COMPETITION_ENTER: 37,
+  COMPETITION_SCORE: 38,
+  SEASON_STANDING: 39,
+  PERSONAL_RESEARCH_RESULT: 40,
 };
 
-describe("v1.8 Canonical MessageType Table", () => {
+describe("v1.10 Canonical MessageType Table", () => {
   test.each(Object.entries(CANONICAL_TABLE))(
     "MessageType.%s should equal %i",
     (name, expected) => {
@@ -56,7 +61,7 @@ describe("v1.8 Canonical MessageType Table", () => {
     }
   );
 
-  test("should have all 36 canonical types", () => {
+  test("should have all 40 canonical types", () => {
     for (const name of Object.keys(CANONICAL_TABLE)) {
       expect(MessageType).toHaveProperty(name);
     }

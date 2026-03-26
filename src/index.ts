@@ -175,3 +175,24 @@ export const RCAN_VERSION = "1.6";
 
 export { makeContributeRequest, makeContributeResult, makeContributeCancel, validateContributeScope, isPreemptedBy, CONTRIBUTE_SCOPE_LEVEL } from "./contribute";
 export type { ContributeRequest, ContributeResult, ContributeCancel, WorkUnitStatus, ComputeResource } from "./contribute";
+
+// ── v1.10: competition protocol ────────────────────────────────────────────────
+export {
+  COMPETITION_SCOPE_LEVEL,
+  makeCompetitionEnter,
+  makeCompetitionScore,
+  makeSeasonStanding,
+  makePersonalResearchResult,
+  validateCompetitionScope,
+} from "./competition.js";
+export type {
+  CompetitionFormat,
+  CompetitionBadge,
+  RunType,
+  StandingEntry,
+  ResearchMetrics,
+  CompetitionEnter,
+  CompetitionScore,
+  SeasonStanding,
+  PersonalResearchResult,
+} from "./competition.js";

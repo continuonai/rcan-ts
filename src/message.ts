@@ -18,7 +18,7 @@ import { SPEC_VERSION } from "./version.js";
 // These integers MUST match rcan-py.
 
 // ═══════════════════════════════════════════════════════════════════
-// v1.8 Canonical MessageType Table
+// v1.10 Canonical MessageType Table
 // This is the SINGLE SOURCE OF TRUTH. Values MUST match rcan-spec §3
 // and rcan-py exactly. See: https://rcan.dev/spec/v1.8
 // ═══════════════════════════════════════════════════════════════════
@@ -82,6 +82,12 @@ export enum MessageType {
 
   // Multimodal training data — v1.8 (36)
   TRAINING_DATA      = 36,
+
+  // ── Competition protocol — v1.10 (37–40) ─────────────────────────────────
+  COMPETITION_ENTER          = 37,
+  COMPETITION_SCORE          = 38,
+  SEASON_STANDING            = 39,
+  PERSONAL_RESEARCH_RESULT   = 40,
 
   // ── Deprecated aliases (v1.8) ──────────────────────────────
   // These map removed types to their canonical replacements.
