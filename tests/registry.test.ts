@@ -1,6 +1,10 @@
+// @ts-nocheck — jest.fn() generic typing differs in ESM @jest/globals
+import { jest } from "@jest/globals";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockFn = () => jest.fn();
 /**
  * Tests for RegistryClient (rcan-ts)
- * All HTTP calls are mocked via global.fetch = jest.fn()
+ * All HTTP calls are mocked via global.fetch = mockFn()
  */
 
 import { RegistryClient, Robot, RegistrationResult, ListResult } from "../src/registry";
@@ -20,11 +24,12 @@ const ROBOT: Robot = {
   status: "active",
 };
 
-function mockFetch(body: unknown, status = 200): jest.Mock {
-  const fn = jest.fn().mockResolvedValue({
+function mockFetch(body: unknown, status = 200)// jest.Mock
+   {
+  const fn = mockFn().mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
-    json: jest.fn().mockResolvedValue(body),
+    json: mockFn().mockResolvedValue(body),
   });
   global.fetch = fn as unknown as typeof fetch;
   return fn;
@@ -58,7 +63,7 @@ describe("RegistryClient.register()", () => {
   it("POSTs to /api/v1/robots and returns rrn + api_key", async () => {
     const result: RegistrationResult = { rrn: "RRN-00000042", api_key: "rcan_abc123" };
     const fn = mockFetch(result, 201);
-    fn.mockResolvedValue({ ok: true, status: 201, json: jest.fn().mockResolvedValue(result) });
+    fn.mockResolvedValue({ ok: true, status: 201, json: mockFn().mockResolvedValue(result) });
     global.fetch = fn as unknown as typeof fetch;
 
     const client = new RegistryClient();
@@ -70,14 +75,14 @@ describe("RegistryClient.register()", () => {
     });
     expect(res.rrn).toBe("RRN-00000042");
     expect(res.api_key).toBe("rcan_abc123");
-    expect((global.fetch as jest.Mock).mock.calls[0][1].method).toBe("POST");
+    expect(((global.fetch as ReturnType<typeof mockFn>).mock.calls[0][1] as any).method).toBe("POST");
   });
 
   it("throws RCANRegistryError on 400", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = mockFn().mockResolvedValue({
       ok: false,
       status: 400,
-      json: jest.fn().mockResolvedValue({ error: "missing manufacturer" }),
+      json: mockFn().mockResolvedValue({ error: "missing manufacturer" }),
     }) as unknown as typeof fetch;
 
     const client = new RegistryClient();
@@ -96,15 +101,15 @@ describe("RegistryClient.get()", () => {
     const robot = await client.get("RRN-00000042");
     expect(robot.rrn).toBe("RRN-00000042");
     expect(robot.manufacturer).toBe("acme");
-    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    const url = ((global.fetch as ReturnType<typeof mockFn>).mock.calls[0][0] as any) as string;
     expect(url).toContain("/api/v1/robots/RRN-00000042");
   });
 
   it("throws on 404", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = mockFn().mockResolvedValue({
       ok: false,
       status: 404,
-      json: jest.fn().mockResolvedValue({ error: "not found" }),
+      json: mockFn().mockResolvedValue({ error: "not found" }),
     }) as unknown as typeof fetch;
 
     const client = new RegistryClient();
@@ -135,7 +140,7 @@ describe("RegistryClient.list()", () => {
     mockFetch({ robots: [], total: 0, limit: 10, offset: 5 });
     const client = new RegistryClient();
     await client.list({ limit: 10, offset: 5, tier: "verified" });
-    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    const url = ((global.fetch as ReturnType<typeof mockFn>).mock.calls[0][0] as any) as string;
     expect(url).toContain("limit=10");
     expect(url).toContain("offset=5");
     expect(url).toContain("tier=verified");
@@ -150,7 +155,7 @@ describe("RegistryClient.patch()", () => {
     const client = new RegistryClient({ apiKey: "rcan_test" });
     const robot = await client.patch("RRN-00000042", { description: "updated" });
     expect(robot.description).toBe("updated");
-    const call = (global.fetch as jest.Mock).mock.calls[0];
+    const call = (global.fetch as ReturnType<typeof mockFn>).mock.calls[0] as any[];
     expect(call[1].method).toBe("PATCH");
     expect(call[1].headers["Authorization"]).toBe("Bearer rcan_test");
   });
@@ -167,15 +172,15 @@ describe("RegistryClient.patch()", () => {
 
 describe("RegistryClient.delete()", () => {
   it("sends DELETE with Authorization header", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = mockFn().mockResolvedValue({
       ok: true,
       status: 204,
-      json: jest.fn().mockResolvedValue({}),
+      json: mockFn().mockResolvedValue({}),
     }) as unknown as typeof fetch;
 
     const client = new RegistryClient({ apiKey: "rcan_test" });
     await expect(client.delete("RRN-00000042")).resolves.toBeUndefined();
-    const call = (global.fetch as jest.Mock).mock.calls[0];
+    const call = (global.fetch as ReturnType<typeof mockFn>).mock.calls[0] as any[];
     expect(call[1].method).toBe("DELETE");
     expect(call[1].headers["Authorization"]).toBe("Bearer rcan_test");
   });
@@ -190,10 +195,10 @@ describe("RegistryClient.delete()", () => {
 
 describe("RegistryClient.search()", () => {
   it("returns array of robots", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = mockFn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue([ROBOT]),
+      json: mockFn().mockResolvedValue([ROBOT]),
     }) as unknown as typeof fetch;
 
     const client = new RegistryClient();
@@ -203,10 +208,10 @@ describe("RegistryClient.search()", () => {
   });
 
   it("handles {results:[...]} response shape", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = mockFn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue({ results: [ROBOT] }),
+      json: mockFn().mockResolvedValue({ results: [ROBOT] }),
     }) as unknown as typeof fetch;
 
     const client = new RegistryClient();
@@ -215,36 +220,36 @@ describe("RegistryClient.search()", () => {
   });
 
   it("passes query params correctly", async () => {
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = mockFn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue([]),
+      json: mockFn().mockResolvedValue([]),
     }) as unknown as typeof fetch;
 
     const client = new RegistryClient();
     await client.search({ q: "arm", tier: "verified" });
-    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    const url = ((global.fetch as ReturnType<typeof mockFn>).mock.calls[0][0] as any) as string;
     expect(url).toContain("q=arm");
     expect(url).toContain("tier=verified");
   });
 
   it("falls back to list endpoint when search returns 404", async () => {
     let callCount = 0;
-    global.fetch = jest.fn().mockImplementation(() => {
+    global.fetch = mockFn().mockImplementation(() => {
       callCount++;
       if (callCount === 1) {
         // search endpoint 404
         return Promise.resolve({
           ok: false,
           status: 404,
-          json: jest.fn().mockResolvedValue({ error: "not found" }),
+          json: mockFn().mockResolvedValue({ error: "not found" }),
         });
       }
       // list endpoint fallback
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: jest.fn().mockResolvedValue({ robots: [ROBOT], total: 1, limit: 20, offset: 0 }),
+        json: mockFn().mockResolvedValue({ robots: [ROBOT], total: 1, limit: 20, offset: 0 }),
       });
     }) as unknown as typeof fetch;
 

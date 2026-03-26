@@ -249,3 +249,7 @@ export {
   fetchRRFRevocations,
 } from "./m2m.js";
 export type { M2MPeerClaims, M2MTrustedClaims } from "./m2m.js";
+
+// v2.2: Post-quantum hybrid signing (ML-DSA-65, FIPS 204)
+export { MLDSAKeyPair, addPQSignature, verifyPQSignature } from "./pqSigning.js";
+export type { MLDSASignatureBlock, MLDSAKeyPairData } from "./pqSigning.js";

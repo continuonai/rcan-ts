@@ -1,3 +1,5 @@
+// @ts-nocheck — jest.fn() generic typing differs in ESM @jest/globals
+import { jest } from "@jest/globals";
 /**
  * Tests for NodeClient and RCANNodeError hierarchy (rcan-ts)
  * All HTTP calls are mocked via globalThis.fetch = jest.fn()
@@ -44,11 +46,11 @@ const RESOLVE_RESULT: RCANResolveResult = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function mockFetch(body: unknown, status = 200): jest.Mock {
-  const fn = jest.fn().mockResolvedValue({
+function mockFetch(body: unknown, status = 200): ReturnType<typeof jest.fn> {
+  const fn = ( jest.fn() as ReturnType<typeof jest.fn>).mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
-    json: jest.fn().mockResolvedValue(body),
+    json: ( jest.fn() as ReturnType<typeof jest.fn>).mockResolvedValue(body as unknown),
   });
   globalThis.fetch = fn as unknown as typeof fetch;
   return fn;
@@ -56,16 +58,16 @@ function mockFetch(body: unknown, status = 200): jest.Mock {
 
 function mockFetchSequence(
   responses: Array<{ body: unknown; status?: number }>
-): jest.Mock {
+): ReturnType<typeof jest.fn> {
   let call = 0;
-  const fn = jest.fn().mockImplementation(() => {
+  const fn = ( jest.fn() as ReturnType<typeof jest.fn>).mockImplementation(() => {
     const r = responses[call] ?? responses[responses.length - 1];
     call++;
     const status = r.status ?? 200;
     return Promise.resolve({
       ok: status >= 200 && status < 300,
       status,
-      json: jest.fn().mockResolvedValue(r.body),
+      json: ( jest.fn() as ReturnType<typeof jest.fn>).mockResolvedValue(r.body as unknown),
     });
   });
   globalThis.fetch = fn as unknown as typeof fetch;
@@ -220,7 +222,7 @@ describe("NodeClient.getNodeManifest()", () => {
   });
 
   it("throws RCANNodeSyncError on network failure", async () => {
-    globalThis.fetch = jest.fn().mockRejectedValue(new Error("ECONNREFUSED")) as unknown as typeof fetch;
+    globalThis.fetch = ( jest.fn() as ReturnType<typeof jest.fn>).mockRejectedValue(new Error("ECONNREFUSED") as unknown) as unknown as typeof fetch;
     const client = new NodeClient();
     await expect(client.getNodeManifest("https://unreachable.example.com")).rejects.toThrow(
       RCANNodeSyncError
@@ -383,7 +385,7 @@ describe("NodeClient.resolve()", () => {
   });
 
   it("throws RCANNodeSyncError on network failure", async () => {
-    globalThis.fetch = jest.fn().mockRejectedValue(new Error("ECONNREFUSED")) as unknown as typeof fetch;
+    globalThis.fetch = ( jest.fn() as ReturnType<typeof jest.fn>).mockRejectedValue(new Error("ECONNREFUSED") as unknown) as unknown as typeof fetch;
     const client = new NodeClient("https://rcan.dev");
     await expect(client.resolve("RRN-00000042")).rejects.toThrow(
       RCANNodeSyncError

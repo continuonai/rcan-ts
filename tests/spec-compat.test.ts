@@ -8,6 +8,11 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+// ESM-compatible __dirname
+const _filename = fileURLToPath(import.meta.url);
+const _dirname = path.dirname(_filename);
 
 const PKG_VERSION: string = "1.1.0"; // keep in sync with package.json
 
@@ -43,7 +48,7 @@ function satisfies(pkgVersion: string, requirement: string): boolean {
 }
 
 describe("compatibility.json fixture", () => {
-  const fixturePath = path.join(__dirname, "fixtures", "compatibility.json");
+  const fixturePath = path.join(_dirname, "fixtures", "compatibility.json");
   let matrix: CompatibilityMatrix;
 
   beforeAll(() => {

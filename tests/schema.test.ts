@@ -1,3 +1,5 @@
+// @ts-nocheck — jest.fn() generic typing differs in ESM @jest/globals
+import { jest } from "@jest/globals";
 /**
  * Tests for canonical schema validation (src/schema.ts)
  */
@@ -11,28 +13,28 @@ import {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function mockFetchSuccess(body: unknown): jest.Mock {
-  const fn = jest.fn().mockResolvedValue({
+function mockFetchSuccess(body: unknown): ReturnType<typeof jest.fn> {
+  const fn = ( jest.fn() as ReturnType<typeof jest.fn>).mockResolvedValue({
     ok: true,
     status: 200,
-    json: jest.fn().mockResolvedValue(body),
+    json: ( jest.fn() as ReturnType<typeof jest.fn>).mockResolvedValue(body as unknown),
   });
   globalThis.fetch = fn as unknown as typeof fetch;
   return fn;
 }
 
-function mockFetchFailure(status = 404): jest.Mock {
-  const fn = jest.fn().mockResolvedValue({
+function mockFetchFailure(status = 404): ReturnType<typeof jest.fn> {
+  const fn = ( jest.fn() as ReturnType<typeof jest.fn>).mockResolvedValue({
     ok: false,
     status,
-    json: jest.fn().mockResolvedValue({ error: 'not found' }),
+    json: ( jest.fn() as ReturnType<typeof jest.fn>).mockResolvedValue({ error: 'not found' } as unknown),
   });
   globalThis.fetch = fn as unknown as typeof fetch;
   return fn;
 }
 
-function mockFetchNetworkError(): jest.Mock {
-  const fn = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
+function mockFetchNetworkError(): ReturnType<typeof jest.fn> {
+  const fn = ( jest.fn() as ReturnType<typeof jest.fn>).mockRejectedValue(new Error('ECONNREFUSED') as unknown);
   globalThis.fetch = fn as unknown as typeof fetch;
   return fn;
 }

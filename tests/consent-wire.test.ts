@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 /**
  * Tests for RCAN Consent Wire Protocol (GAP-05)
  */
@@ -8,7 +9,7 @@ import {
   makeConsentDeny,
   validateConsentMessage,
 } from "../src/consent";
-import { MessageType } from "../src/message";
+import { MessageType, RCANMessage } from "../src/message";
 
 const BASE_REQUEST = {
   requesterRuri: "rcan://registry.rcan.dev/acme/arm/v1/robot-a",
@@ -127,7 +128,6 @@ describe("validateConsentMessage", () => {
   });
 
   test("rejects CONSENT_REQUEST without justification", () => {
-    const { RCANMessage } = require("../src/message");
     const msg = makeConsentRequest({ ...BASE_REQUEST, justification: "" });
     // Override to remove justification
     const badMsg = new RCANMessage({
@@ -151,7 +151,6 @@ describe("validateConsentMessage", () => {
   });
 
   test("returns invalid for unknown consent command", () => {
-    const { RCANMessage } = require("../src/message");
     const msg = new RCANMessage({ rcan: "1.5", cmd: "UNKNOWN_CONSENT", target: "rcan://x/a/b/v1/y", params: {} });
     const result = validateConsentMessage(msg);
     expect(result.valid).toBe(false);

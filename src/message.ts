@@ -121,6 +121,13 @@ export interface SignatureBlock {
   sig: string;
 }
 
+/** v2.2: Post-quantum (ML-DSA-65) signature block */
+export interface PQSignatureBlock {
+  alg: "ml-dsa-65";
+  kid: string;
+  sig: string;
+}
+
 export interface RCANMessageData {
   rcan?: string;
   /** v1.5: explicit protocol version field (defaults to SPEC_VERSION) */
@@ -160,6 +167,8 @@ export interface RCANMessageData {
   firmwareHash?: string;
   /** v2.1: URI to sender's SBOM attestation endpoint (envelope field 14). Required at L2+. */
   attestationRef?: string;
+  /** v2.2: ML-DSA-65 post-quantum signature block (field 16, FIPS 204). Hybrid mode alongside Ed25519. */
+  pqSig?: PQSignatureBlock | undefined;
   [key: string]: unknown;
 }
 
@@ -201,6 +210,8 @@ export class RCANMessage {
   readonly firmwareHash: string | undefined;
   /** v2.1: URI to sender's SBOM attestation endpoint */
   readonly attestationRef: string | undefined;
+  /** v2.2: ML-DSA-65 post-quantum signature (field 16, FIPS 204). Hybrid alongside Ed25519. */
+  readonly pqSig: PQSignatureBlock | undefined;
 
   constructor(data: RCANMessageData) {
     if (!data.cmd || data.cmd.trim() === "") {
@@ -234,6 +245,7 @@ export class RCANMessage {
     this.mediaChunks = data.mediaChunks;
     this.firmwareHash = data.firmwareHash;
     this.attestationRef = data.attestationRef;
+    this.pqSig = data.pqSig as PQSignatureBlock | undefined;
 
     // v2.1: hard-reject signature blocks with sig:'pending' (removed legacy pattern)
     if (
@@ -291,6 +303,7 @@ export class RCANMessage {
     if (this.mediaChunks !== undefined) obj.mediaChunks = this.mediaChunks;
     if (this.firmwareHash !== undefined) obj.firmwareHash = this.firmwareHash;
     if (this.attestationRef !== undefined) obj.attestationRef = this.attestationRef;
+    if (this.pqSig !== undefined) obj.pqSig = this.pqSig;
     return obj;
   }
 
@@ -342,6 +355,7 @@ export class RCANMessage {
       mediaChunks: obj.mediaChunks as Array<Record<string, unknown>> | undefined,
       firmwareHash: obj.firmwareHash as string | undefined,
       attestationRef: obj.attestationRef as string | undefined,
+      pqSig: obj.pqSig as PQSignatureBlock | undefined,
     });
   }
 }
