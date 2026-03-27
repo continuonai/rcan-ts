@@ -69,7 +69,7 @@
     "transformIgnorePatterns": [
       "node_modules/(?!(@noble/post-quantum|@noble/hashes)/)"
     ],
-    "setupFilesAfterFramework": [
+    "setupFilesAfterEnv": [
       "<rootDir>/tests/jest.setup.ts"
     ]
   },
