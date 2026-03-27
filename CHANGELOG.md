@@ -112,3 +112,14 @@ All notable changes to @continuonai/rcan-ts are documented here.
 - `rcan-validate` CLI
 - Browser ESM bundle (dist/browser.mjs)
 - CJS + ESM dual build
+
+## v1.2.1 (2026-03-27)
+
+### Breaking Changes
+- **`SignatureBlock.alg`** narrowed to literal `"ml-dsa-65"` — TypeScript compile error if `"Ed25519"` passed
+- **`pqSig` field removed** from `RCANMessageData` and `RCANMessage` — `signature` is the sole signing field
+- **`signMessage()` / `verifyMessage()`** are now the canonical names (replacing `addPQSignature` / `verifyPQSignature`, kept as deprecated aliases)
+- **`verifyMessage()` rejects** any `alg !== "ml-dsa-65"` with explicit deprecation error
+
+### Summary
+Clean ML-DSA-65-only release. 545 tests passing.
