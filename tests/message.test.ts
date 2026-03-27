@@ -61,7 +61,7 @@ describe("RCANMessage computed properties", () => {
   test("isSigned = true when signature present", () => {
     const msg = new RCANMessage({
       ...VALID_DATA,
-      signature: { alg: "Ed25519", kid: "abc123", sig: "deadbeef" },
+      signature: { alg: "ml-dsa-65", kid: "abc123", sig: "deadbeef" },
     });
     expect(msg.isSigned).toBe(true);
   });

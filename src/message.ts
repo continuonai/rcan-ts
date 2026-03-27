@@ -115,8 +115,9 @@ export interface DelegationHop {
   signature: string;
 }
 
+/** RCAN v2.2: ML-DSA-65 is the only valid alg ("ml-dsa-65"). Ed25519 is deprecated. */
 export interface SignatureBlock {
-  alg: string;
+  alg: "ml-dsa-65";
   kid: string;
   sig: string;
 }
@@ -303,7 +304,6 @@ export class RCANMessage {
     if (this.mediaChunks !== undefined) obj.mediaChunks = this.mediaChunks;
     if (this.firmwareHash !== undefined) obj.firmwareHash = this.firmwareHash;
     if (this.attestationRef !== undefined) obj.attestationRef = this.attestationRef;
-    if (this.pqSig !== undefined) obj.pqSig = this.pqSig;
     return obj;
   }
 

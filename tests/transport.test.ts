@@ -27,7 +27,7 @@ function makeSafetyMsg(): RCANMessage {
       from_rrn:  'rcan://controller1',
       to_rrn:    'rcan://robot1',
     },
-    signature: { alg: 'Ed25519', kid: 'key1', sig: 'AAAABBBBCCCCDDDD' },
+    signature: { alg: 'ml-dsa-65', kid: 'key1', sig: 'AAAABBBBCCCCDDDD' },
     timestamp: '2026-03-16T00:00:00.000Z',
   });
 }

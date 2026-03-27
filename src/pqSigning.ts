@@ -1,38 +1,23 @@
 /**
- * RCAN v2.2 Post-Quantum Hybrid Signing — ML-DSA-65 (NIST FIPS 204)
+ * RCAN v2.2 ML-DSA-65 Signing (NIST FIPS 204)
  *
- * Provides MLDSAKeyPair for post-quantum signing alongside the existing
- * Ed25519 SignatureBlock.  In hybrid mode a message carries both:
- *   - `signature`  — Ed25519 SignatureBlock  (backward-compat with v2.1)
- *   - `pqSig`      — MLDSASignatureBlock     (new in v2.2)
- *
- * Key sizes (ML-DSA-65, NIST security level 3):
- *   Public key:   1952 bytes
- *   Private key:  4032 bytes
- *   Signature:    3309 bytes
+ * Ed25519 is deprecated. ML-DSA-65 is the ONLY signing algorithm.
+ * All signed messages carry a ``signature`` block with ``alg: "ml-dsa-65"``.
  *
  * Requires: @noble/post-quantum (npm install @noble/post-quantum)
  *
- * Spec: https://rcan.dev/spec#section-7-2
+ * Spec: https://rcan.dev/spec/v2.2#section-7-2
  */
 
-import type { RCANMessage, PQSignatureBlock } from "./message.js";
+import type { RCANMessage, SignatureBlock } from "./message.js";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-/** Re-export for consumers who import from pqSigning directly */
-export type { PQSignatureBlock } from "./message.js";
-/** @deprecated use PQSignatureBlock */
-export type MLDSASignatureBlock = PQSignatureBlock;
-
 export interface MLDSAKeyPairData {
-  /** Public key bytes (1952 bytes) */
   publicKey: Uint8Array;
-  /** Private key bytes (4032 bytes). Absent for verify-only key pairs. */
   secretKey?: Uint8Array;
-  /** 8-char hex key ID */
   keyId: string;
 }
 
@@ -55,59 +40,48 @@ function fromBase64url(b64: string): Uint8Array {
 }
 
 async function sha256hex(data: Uint8Array): Promise<string> {
-  // Web Crypto — available in browsers, Node 18+, Cloudflare Workers
-  const g = typeof globalThis !== "undefined" ? globalThis : ({} as typeof globalThis);
-  const webcrypto = (g as unknown as { crypto?: { subtle?: SubtleCrypto } }).crypto;
-  const subtle = webcrypto?.subtle;
-  if (subtle) {
-    const buf = await subtle.digest("SHA-256", data as unknown as ArrayBuffer);
+  if (typeof crypto !== "undefined" && crypto.subtle) {
+    const buf = await crypto.subtle.digest("SHA-256", data.buffer as ArrayBuffer);
     return Array.from(new Uint8Array(buf))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("")
       .slice(0, 8);
   }
-  // Older Node.js fallback via dynamic import (never bundled into browser build)
-  const nodeCrypto = await import("node:crypto").catch(() => null);
-  if (nodeCrypto) {
-    return nodeCrypto.createHash("sha256").update(data).digest("hex").slice(0, 8);
-  }
-  throw new Error("No SHA-256 implementation available");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createHash } = require("node:crypto") as { createHash: (alg: string) => { update: (d: Uint8Array) => { digest: (enc: string) => string } } };
+  return createHash("sha256").update(data).digest("hex").slice(0, 8);
 }
 
-type MlDsaModule = { ml_dsa65: { keygen: () => { publicKey: Uint8Array; secretKey: Uint8Array }; sign: (msg: Uint8Array, sk: Uint8Array) => Uint8Array; verify: (sig: Uint8Array, msg: Uint8Array, pk: Uint8Array) => boolean } };
-let _mlDsaModule: MlDsaModule | undefined;
+let _mlDsaModule: { ml_dsa65: { keygen: () => { publicKey: Uint8Array; secretKey: Uint8Array }; sign: (msg: Uint8Array, sk: Uint8Array) => Uint8Array; verify: (sig: Uint8Array, msg: Uint8Array, pk: Uint8Array) => boolean } } | undefined;
 
-async function requireNoblePostQuantum(): Promise<MlDsaModule> {
+async function requireMlDsa() {
   if (_mlDsaModule) return _mlDsaModule;
-  // CJS-first: use require() when available (Node / Jest / ts-jest).
-  // Falls back to ESM dynamic import() for browser / CF Workers runtimes.
   if (typeof require !== "undefined") {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      _mlDsaModule = (require as NodeRequire)("@noble/post-quantum/ml-dsa.js") as MlDsaModule;
-      return _mlDsaModule;
-    } catch { /* fall through to ESM */ }
+      _mlDsaModule = require("@noble/post-quantum/ml-dsa.js") as typeof _mlDsaModule;
+      return _mlDsaModule!;
+    } catch { /* fall through */ }
   }
   try {
-    _mlDsaModule = await import("@noble/post-quantum/ml-dsa.js") as unknown as MlDsaModule;
-    return _mlDsaModule;
+    _mlDsaModule = await import("@noble/post-quantum/ml-dsa.js") as unknown as typeof _mlDsaModule;
+    return _mlDsaModule!;
   } catch {
     throw new Error(
-      "ML-DSA signing requires @noble/post-quantum. " +
+      "ML-DSA-65 signing requires @noble/post-quantum. " +
         "Install with: npm install @noble/post-quantum"
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// MLDSAKeyPair
+// MLDSAKeyPair — the only signing key type in RCAN v2.2
 // ---------------------------------------------------------------------------
 
 /**
  * An ML-DSA-65 (CRYSTALS-Dilithium, NIST FIPS 204) key pair.
  *
- * Immutable value object.  Build via {@link MLDSAKeyPair.generate} or
- * {@link MLDSAKeyPair.fromPublicKey}.
+ * This is the ONLY signing key type in RCAN v2.2+. Ed25519 is deprecated.
  */
 export class MLDSAKeyPair {
   readonly keyId: string;
@@ -120,155 +94,124 @@ export class MLDSAKeyPair {
     this.secretKey = data.secretKey;
   }
 
-  /** Generate a new ML-DSA-65 key pair. */
   static async generate(): Promise<MLDSAKeyPair> {
-    const { ml_dsa65 } = await requireNoblePostQuantum();
-    const kp = ml_dsa65.keygen();
+    const m = await requireMlDsa();
+    const kp = m!.ml_dsa65.keygen();
     const keyId = await sha256hex(kp.publicKey);
-    return new MLDSAKeyPair({
-      publicKey: kp.publicKey,
-      secretKey: kp.secretKey,
-      keyId,
-    });
+    return new MLDSAKeyPair({ publicKey: kp.publicKey, secretKey: kp.secretKey, keyId });
   }
 
-  /** Build a verify-only key pair from raw public key bytes. */
   static async fromPublicKey(publicKey: Uint8Array): Promise<MLDSAKeyPair> {
     const keyId = await sha256hex(publicKey);
     return new MLDSAKeyPair({ publicKey, keyId });
   }
 
-  /** Build a full key pair from saved bytes (public + secret). */
-  static async fromKeyMaterial(
-    publicKey: Uint8Array,
-    secretKey: Uint8Array
-  ): Promise<MLDSAKeyPair> {
+  static async fromKeyMaterial(publicKey: Uint8Array, secretKey: Uint8Array): Promise<MLDSAKeyPair> {
     const keyId = await sha256hex(publicKey);
     return new MLDSAKeyPair({ publicKey, secretKey, keyId });
   }
 
-  get hasPrivateKey(): boolean {
-    return this.secretKey !== undefined;
-  }
+  get hasPrivateKey(): boolean { return this.secretKey !== undefined; }
 
-  /** Sign raw bytes; returns ML-DSA-65 signature (3309 bytes). */
   async signBytes(data: Uint8Array): Promise<Uint8Array> {
-    if (!this.secretKey) {
-      throw new Error("Cannot sign: MLDSAKeyPair has no private key (verify-only)");
-    }
-    const { ml_dsa65 } = await requireNoblePostQuantum();
-    return ml_dsa65.sign(data, this.secretKey);
+    if (!this.secretKey) throw new Error("Cannot sign: MLDSAKeyPair has no private key (verify-only)");
+    const m = await requireMlDsa();
+    return m!.ml_dsa65.sign(data, this.secretKey);
   }
 
-  /**
-   * Verify an ML-DSA-65 signature.
-   * @returns true if valid
-   * @throws {Error} on invalid signature
-   */
   async verifyBytes(data: Uint8Array, signature: Uint8Array): Promise<void> {
-    const { ml_dsa65 } = await requireNoblePostQuantum();
-    const ok = ml_dsa65.verify(signature, data, this.publicKey);
-    if (!ok) throw new Error("ML-DSA signature verification failed");
+    const m = await requireMlDsa();
+    const ok = m!.ml_dsa65.verify(signature, data, this.publicKey);
+    if (!ok) throw new Error("ML-DSA-65 signature verification failed");
   }
 
   toString(): string {
-    const mode = this.hasPrivateKey ? "private+public" : "public-only";
-    return `MLDSAKeyPair(keyId=${this.keyId}, alg=ML-DSA-65, ${mode})`;
+    return `MLDSAKeyPair(keyId=${this.keyId}, alg=ML-DSA-65, ${this.hasPrivateKey ? "private+public" : "public-only"})`;
   }
 }
 
 // ---------------------------------------------------------------------------
-// Canonical message bytes (mirrors rcan-py _canonical_message_bytes)
+// Canonical message bytes
 // ---------------------------------------------------------------------------
 
 function canonicalMessageBytes(msg: RCANMessage): Uint8Array {
-  const m = msg as unknown as Record<string, unknown>;
   const payload = {
     rcan: msg.rcan,
-    msg_id: (m["msgId"] ?? m["msg_id"] ?? "") as string,
+    msg_id: (msg as unknown as Record<string, unknown>)["msgId"] ?? "",
     timestamp: msg.timestamp,
     cmd: msg.cmd,
     target: msg.target,
     params: msg.params,
   };
-  const sorted = JSON.stringify(
-    Object.fromEntries(Object.entries(payload).sort()),
-    null,
-    undefined
+  return new TextEncoder().encode(
+    JSON.stringify(Object.fromEntries(Object.entries(payload).sort()))
   );
-  return new TextEncoder().encode(sorted);
 }
 
 // ---------------------------------------------------------------------------
-// Hybrid sign / verify
+// sign / verify
 // ---------------------------------------------------------------------------
 
 /**
- * Add an ML-DSA-65 signature (`pqSig`) to an RCAN message.
+ * Sign an RCANMessage with ML-DSA-65 (the only signing algorithm in RCAN v2.2).
  *
- * This is the v2.2 hybrid complement to the existing Ed25519 signature.
- * Call {@link signMessageEd25519} (or the existing signing path) first to set
- * `signature`, then call this to append `pqSig`.
- *
- * @param msg      RCAN message (mutated in place — sets `pqSig`)
- * @param keypair  ML-DSA-65 key pair with private key
- * @returns The same message cast to include `pqSig`
+ * Sets msg.signature = { alg: "ml-dsa-65", kid, sig }.
  */
-export async function addPQSignature(
+export async function signMessage(
   msg: RCANMessage,
   keypair: MLDSAKeyPair
 ): Promise<RCANMessage> {
   const payload = canonicalMessageBytes(msg);
   const rawSig = await keypair.signBytes(payload);
-  const block: PQSignatureBlock = {
+  (msg as unknown as Record<string, unknown>)["signature"] = {
     alg: "ml-dsa-65",
     kid: keypair.keyId,
     sig: toBase64url(rawSig),
-  };
-  (msg as unknown as Record<string, unknown>)["pqSig"] = block;
+  } satisfies SignatureBlock;
   return msg;
 }
 
 /**
- * Verify the ML-DSA-65 signature (`pqSig`) on an RCAN message.
+ * Verify the ML-DSA-65 signature on an RCANMessage.
  *
- * @param msg           Message with a `pqSig` field
- * @param trustedKeys   Trusted ML-DSA public key pairs
- * @param requirePQ     Default true: raise when `pqSig` absent (ML-DSA-65 is primary from 2026). Pass false only for legacy v2.1 compat.
+ * @throws {Error} if signature is missing, alg is not ml-dsa-65, key not found, or invalid.
  */
-export async function verifyPQSignature(
+export async function verifyMessage(
   msg: RCANMessage,
-  trustedKeys: MLDSAKeyPair[],
-  requirePQ = true
+  trustedKeys: MLDSAKeyPair[]
 ): Promise<void> {
-  const pqSig = (msg as unknown as Record<string, unknown>)["pqSig"] as PQSignatureBlock | undefined;
-
-  if (!pqSig) {
-    if (requirePQ) {
-      throw new Error("ML-DSA signature (pqSig) required but missing from message");
-    }
-    return; // backward compat: pre-v2.2 messages have no pqSig — skip
+  const sig = msg.signature;
+  if (!sig) throw new Error("Message is unsigned — signature field missing");
+  if (sig.alg !== "ml-dsa-65") {
+    throw new Error(
+      `Unsupported signature algorithm: ${sig.alg}. ` +
+      "RCAN v2.2 requires ml-dsa-65 (Ed25519 is deprecated)."
+    );
   }
-
-  if (pqSig.alg !== "ml-dsa-65") {
-    throw new Error(`Unsupported PQ signature algorithm: ${pqSig.alg}`);
-  }
-
-  const matched = trustedKeys.find((k) => k.keyId === pqSig.kid);
+  const matched = trustedKeys.find((k) => k.keyId === sig.kid);
   if (!matched) {
     throw new Error(
-      `No trusted ML-DSA key with kid=${pqSig.kid}. ` +
+      `No trusted ML-DSA-65 key with kid=${sig.kid}. ` +
         `Known kids: [${trustedKeys.map((k) => k.keyId).join(", ")}]`
     );
   }
-
   let rawSig: Uint8Array;
-  try {
-    rawSig = fromBase64url(pqSig.sig);
-  } catch (e) {
-    throw new Error(`Invalid base64url ML-DSA signature: ${e}`);
-  }
+  try { rawSig = fromBase64url(sig.sig); } catch (e) { throw new Error(`Invalid base64url sig: ${e}`); }
+  await matched.verifyBytes(canonicalMessageBytes(msg), rawSig);
+}
 
-  const payload = canonicalMessageBytes(msg);
-  await matched.verifyBytes(payload, rawSig);
+// ---------------------------------------------------------------------------
+// Deprecated aliases for migration
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use signMessage() — Ed25519 is removed in RCAN v2.2 */
+export const addPQSignature = signMessage;
+
+/** @deprecated Use verifyMessage() — Ed25519 is removed in RCAN v2.2 */
+export async function verifyPQSignature(
+  msg: RCANMessage,
+  trustedKeys: MLDSAKeyPair[],
+  _requirePQ = true
+): Promise<void> {
+  return verifyMessage(msg, trustedKeys);
 }

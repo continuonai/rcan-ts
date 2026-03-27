@@ -1,46 +1,29 @@
 /**
- * Tests for RCAN v2.2 post-quantum hybrid signing (ML-DSA-65, FIPS 204).
+ * Tests for RCAN v2.2 ML-DSA-65 signing.
+ * Ed25519 is deprecated. MLDSAKeyPair is the only signing class.
  */
 
-import { RCANMessage } from "../src/message";
-import {
-  MLDSAKeyPair,
-  addPQSignature,
-  verifyPQSignature,
-} from "../src/pqSigning";
+import { RCANMessage } from "../src/message.js";
+import { MLDSAKeyPair, signMessage, verifyMessage } from "../src/pqSigning.js";
 
 const TEST_TARGET = "rcan://rrf.rcan.dev/test/robot/v1/unit-001";
 
 function makeMsg(): RCANMessage {
-  return new RCANMessage({
-    cmd: "test_cmd",
-    target: TEST_TARGET,
-    params: { x: 1 },
-    rcan: "2.2.0",
-  });
+  return new RCANMessage({ cmd: "test_cmd", target: TEST_TARGET, params: { x: 1 }, rcan: "2.2.0" });
 }
-
-// ---------------------------------------------------------------------------
-// MLDSAKeyPair
-// ---------------------------------------------------------------------------
 
 describe("MLDSAKeyPair", () => {
   let kp: MLDSAKeyPair;
+  beforeAll(async () => { kp = await MLDSAKeyPair.generate(); });
 
-  beforeAll(async () => {
-    kp = await MLDSAKeyPair.generate();
-  });
-
-  it("generates keys with correct sizes", () => {
+  it("generates correct key sizes", () => {
     expect(kp.publicKey.length).toBe(1952);
-    expect(kp.secretKey).toBeDefined();
     expect(kp.secretKey!.length).toBe(4032);
     expect(kp.keyId).toHaveLength(8);
-    expect(kp.hasPrivateKey).toBe(true);
   });
 
   it("signs and verifies bytes", async () => {
-    const data = new TextEncoder().encode("hello rcan v2.2");
+    const data = new TextEncoder().encode("hello");
     const sig = await kp.signBytes(data);
     expect(sig.length).toBe(3309);
     await expect(kp.verifyBytes(data, sig)).resolves.toBeUndefined();
@@ -49,188 +32,96 @@ describe("MLDSAKeyPair", () => {
   it("rejects tampered data", async () => {
     const data = new TextEncoder().encode("original");
     const sig = await kp.signBytes(data);
-    const tampered = new TextEncoder().encode("tampered");
-    await expect(kp.verifyBytes(tampered, sig)).rejects.toThrow();
+    await expect(kp.verifyBytes(new TextEncoder().encode("tampered"), sig)).rejects.toThrow();
   });
 
-  it("builds verify-only key pair from public key", async () => {
-    const pubOnly = await MLDSAKeyPair.fromPublicKey(kp.publicKey);
-    expect(pubOnly.hasPrivateKey).toBe(false);
-    expect(pubOnly.keyId).toBe(kp.keyId);
-    await expect(
-      pubOnly.signBytes(new TextEncoder().encode("data"))
-    ).rejects.toThrow("verify-only");
+  it("verify-only pair cannot sign", async () => {
+    const pub = await MLDSAKeyPair.fromPublicKey(kp.publicKey);
+    await expect(pub.signBytes(new TextEncoder().encode("x"))).rejects.toThrow("verify-only");
   });
 
   it("round-trips via fromKeyMaterial", async () => {
-    const restored = await MLDSAKeyPair.fromKeyMaterial(kp.publicKey, kp.secretKey!);
-    expect(restored.keyId).toBe(kp.keyId);
-    const data = new TextEncoder().encode("round-trip");
-    const sig = await restored.signBytes(data);
-    const pubOnly = await MLDSAKeyPair.fromPublicKey(kp.publicKey);
-    await expect(pubOnly.verifyBytes(data, sig)).resolves.toBeUndefined();
+    const r = await MLDSAKeyPair.fromKeyMaterial(kp.publicKey, kp.secretKey!);
+    const data = new TextEncoder().encode("rt");
+    const sig = await r.signBytes(data);
+    const pub = await MLDSAKeyPair.fromPublicKey(kp.publicKey);
+    await expect(pub.verifyBytes(data, sig)).resolves.toBeUndefined();
   });
 
-  it("has descriptive toString()", () => {
-    const s = kp.toString();
-    expect(s).toContain("ML-DSA-65");
-    expect(s).toContain("private+public");
+  it("has descriptive toString", () => {
+    expect(kp.toString()).toContain("ML-DSA-65");
+    expect(kp.toString()).toContain("private+public");
   });
 });
 
-// ---------------------------------------------------------------------------
-// addPQSignature / verifyPQSignature
-// ---------------------------------------------------------------------------
-
-describe("Hybrid PQ signing", () => {
+describe("signMessage / verifyMessage", () => {
   let kp: MLDSAKeyPair;
-  let pubOnly: MLDSAKeyPair;
-
+  let pub: MLDSAKeyPair;
   beforeAll(async () => {
     kp = await MLDSAKeyPair.generate();
-    pubOnly = await MLDSAKeyPair.fromPublicKey(kp.publicKey);
+    pub = await MLDSAKeyPair.fromPublicKey(kp.publicKey);
   });
 
-  it("adds pqSig to message", async () => {
+  it("sets signature.alg to ml-dsa-65", async () => {
     const msg = makeMsg();
-    const signed = await addPQSignature(msg, kp);
-    expect(signed.pqSig).toBeDefined();
-    expect(signed.pqSig!.alg).toBe("ml-dsa-65");
-    expect(signed.pqSig!.kid).toBe(kp.keyId);
-    expect(signed.pqSig!.sig).toBeTruthy();
+    await signMessage(msg, kp);
+    expect(msg.signature?.alg).toBe("ml-dsa-65");
+    expect(msg.signature?.kid).toBe(kp.keyId);
   });
 
-  it("verifies a valid pqSig", async () => {
+  it("verifies valid signature", async () => {
     const msg = makeMsg();
-    await addPQSignature(msg, kp);
-    await expect(
-      verifyPQSignature(msg, [pubOnly])
-    ).resolves.toBeUndefined();
+    await signMessage(msg, kp);
+    await expect(verifyMessage(msg, [pub])).resolves.toBeUndefined();
   });
 
-  it("throws when no pqSig (default requirePQ=true, ML-DSA primary)", async () => {
+  it("rejects wrong key", async () => {
     const msg = makeMsg();
-    // no pqSig — default is now requirePQ=true (ML-DSA primary from 2026)
-    await expect(
-      verifyPQSignature(msg, [pubOnly])
-    ).rejects.toThrow();
-  });
-
-  it("skips verification when no pqSig with requirePQ=false (legacy v2.1 compat)", async () => {
-    const msg = makeMsg();
-    // requirePQ=false: accept Ed25519-only messages from pre-v2.2 robots
-    await expect(
-      verifyPQSignature(msg, [pubOnly], false)
-    ).resolves.toBeUndefined();
-  });
-
-  it("throws when pqSig absent and requirePQ=true (explicit)", async () => {
-    const msg = makeMsg();
-    await expect(
-      verifyPQSignature(
-        msg,
-        [pubOnly],
-        true
-      )
-    ).rejects.toThrow("pqSig");
-  });
-
-  it("verifies when pqSig present and requirePQ=true", async () => {
-    const msg = makeMsg();
-    await addPQSignature(msg, kp);
-    await expect(
-      verifyPQSignature(
-        msg,
-        [pubOnly],
-        true
-      )
-    ).resolves.toBeUndefined();
-  });
-
-  it("throws on wrong kid", async () => {
-    const msg = makeMsg();
-    await addPQSignature(msg, kp);
+    await signMessage(msg, kp);
     const other = await MLDSAKeyPair.generate();
     const otherPub = await MLDSAKeyPair.fromPublicKey(other.publicKey);
-    await expect(
-      verifyPQSignature(
-        msg,
-        [otherPub]
-      )
-    ).rejects.toThrow("kid");
+    await expect(verifyMessage(msg, [otherPub])).rejects.toThrow("kid");
   });
 
-  it("throws on tampered pqSig", async () => {
+  it("rejects tampered message", async () => {
     const msg = makeMsg();
-    await addPQSignature(msg, kp);
-    // corrupt first byte
-    const corruptSig = msg.pqSig!.sig.slice(0, 2) + "XX" + msg.pqSig!.sig.slice(4);
-    (msg as unknown as Record<string, unknown>)["pqSig"] = {
-      ...msg.pqSig,
-      sig: corruptSig,
-    };
-    await expect(
-      verifyPQSignature(
-        msg,
-        [pubOnly]
-      )
-    ).rejects.toThrow();
+    await signMessage(msg, kp);
+    const corrupted = msg.signature!.sig.slice(0, 4) + "XXXX" + msg.signature!.sig.slice(8);
+    (msg as unknown as Record<string, unknown>)["signature"] = { ...msg.signature, sig: corrupted };
+    await expect(verifyMessage(msg, [pub])).rejects.toThrow();
   });
 
-  it("throws on unsupported pqAlg", async () => {
+  it("rejects ed25519 alg", async () => {
     const msg = makeMsg();
-    await addPQSignature(msg, kp);
-    (msg as unknown as Record<string, unknown>)["pqSig"] = {
-      ...msg.pqSig,
-      alg: "slh-dsa-sha2-128s",
-    };
-    await expect(
-      verifyPQSignature(
-        msg,
-        [pubOnly]
-      )
-    ).rejects.toThrow("Unsupported PQ");
+    (msg as unknown as Record<string, unknown>)["signature"] = { alg: "ed25519", kid: "x", sig: "y" };
+    await expect(verifyMessage(msg, [pub])).rejects.toThrow("deprecated");
+  });
+
+  it("rejects unsigned message", async () => {
+    const msg = makeMsg();
+    await expect(verifyMessage(msg, [pub])).rejects.toThrow("unsigned");
   });
 });
 
-// ---------------------------------------------------------------------------
-// RCANMessage pqSig round-trip
-// ---------------------------------------------------------------------------
-
-describe("RCANMessage pqSig round-trip", () => {
+describe("RCANMessage round-trip", () => {
   let kp: MLDSAKeyPair;
+  beforeAll(async () => { kp = await MLDSAKeyPair.generate(); });
 
-  beforeAll(async () => {
-    kp = await MLDSAKeyPair.generate();
-  });
-
-  it("pqSig survives toJSON / fromJSON", async () => {
+  it("signature survives toJSON/fromJSON", async () => {
     const msg = makeMsg();
-    await addPQSignature(msg, kp);
+    await signMessage(msg, kp);
     const json = msg.toJSON();
-    expect(json["pqSig"]).toBeDefined();
+    expect((json["signature"] as Record<string,string>)["alg"]).toBe("ml-dsa-65");
     const restored = RCANMessage.fromJSON(json);
-    expect(restored.pqSig).toBeDefined();
-    expect(restored.pqSig!.alg).toBe("ml-dsa-65");
-    expect(restored.pqSig!.sig).toBe(msg.pqSig!.sig);
-  });
-
-  it("pqSig absent from toJSON when not set", () => {
-    const msg = makeMsg();
-    const json = msg.toJSON();
-    expect(json["pqSig"]).toBeUndefined();
+    expect(restored.signature?.alg).toBe("ml-dsa-65");
+    expect(restored.signature?.sig).toBe(msg.signature?.sig);
   });
 
   it("verifies after round-trip", async () => {
     const msg = makeMsg();
-    await addPQSignature(msg, kp);
+    await signMessage(msg, kp);
     const restored = RCANMessage.fromJSON(msg.toJSON());
-    const pubOnly = await MLDSAKeyPair.fromPublicKey(kp.publicKey);
-    await expect(
-      verifyPQSignature(
-        restored,
-        [pubOnly]
-      )
-    ).resolves.toBeUndefined();
+    const pub = await MLDSAKeyPair.fromPublicKey(kp.publicKey);
+    await expect(verifyMessage(restored, [pub])).resolves.toBeUndefined();
   });
 });
