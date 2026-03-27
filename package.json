@@ -68,6 +68,9 @@
     "injectGlobals": true,
     "transformIgnorePatterns": [
       "node_modules/(?!(@noble/post-quantum|@noble/hashes)/)"
+    ],
+    "setupFilesAfterFramework": [
+      "<rootDir>/tests/jest.setup.ts"
     ]
   },
   "browser": "dist/browser.mjs",
