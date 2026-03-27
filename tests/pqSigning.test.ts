@@ -108,15 +108,23 @@ describe("Hybrid PQ signing", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("skips verification when no pqSig (backward compat)", async () => {
+  it("throws when no pqSig (default requirePQ=true, ML-DSA primary)", async () => {
     const msg = makeMsg();
-    // no pqSig set — should not throw even with trustedKeys
+    // no pqSig — default is now requirePQ=true (ML-DSA primary from 2026)
     await expect(
       verifyPQSignature(msg, [pubOnly])
+    ).rejects.toThrow();
+  });
+
+  it("skips verification when no pqSig with requirePQ=false (legacy v2.1 compat)", async () => {
+    const msg = makeMsg();
+    // requirePQ=false: accept Ed25519-only messages from pre-v2.2 robots
+    await expect(
+      verifyPQSignature(msg, [pubOnly], false)
     ).resolves.toBeUndefined();
   });
 
-  it("throws when pqSig absent and requirePQ=true", async () => {
+  it("throws when pqSig absent and requirePQ=true (explicit)", async () => {
     const msg = makeMsg();
     await expect(
       verifyPQSignature(

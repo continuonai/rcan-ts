@@ -234,12 +234,12 @@ export async function addPQSignature(
  *
  * @param msg           Message with a `pqSig` field
  * @param trustedKeys   Trusted ML-DSA public key pairs
- * @param requirePQ     If true, raise when `pqSig` is absent (for post-2028 hard mode)
+ * @param requirePQ     Default true: raise when `pqSig` absent (ML-DSA-65 is primary from 2026). Pass false only for legacy v2.1 compat.
  */
 export async function verifyPQSignature(
   msg: RCANMessage,
   trustedKeys: MLDSAKeyPair[],
-  requirePQ = false
+  requirePQ = true
 ): Promise<void> {
   const pqSig = (msg as unknown as Record<string, unknown>)["pqSig"] as PQSignatureBlock | undefined;
 
