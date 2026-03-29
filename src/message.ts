@@ -170,6 +170,11 @@ export interface RCANMessageData {
   attestationRef?: string;
   /** v2.2: ML-DSA-65 post-quantum signature block (field 16, FIPS 204). Hybrid mode alongside Ed25519. */
   pqSig?: PQSignatureBlock | undefined;
+  /** v2.2 snake_case envelope aliases (spec §3.2) */
+  firmware_hash?: string;
+  attestation_ref?: string;
+  pq_sig?: string;
+  pq_alg?: string;
   [key: string]: unknown;
 }
 

@@ -11,6 +11,7 @@ export default defineConfig([
     outDir: "dist",
     platform: "node",
     target: "node18",
+    external: ["node:crypto"],
   },
   // CLI binary — rcan-validate
   {
@@ -32,6 +33,9 @@ export default defineConfig([
     outDir: "dist",
     platform: "browser",
     target: "es2020",
+    // Node built-ins are excluded from browser bundle — verifyMediaChunkHash no-ops there
+    noExternal: [],
+    esbuildOptions(opts) { opts.external = [...(opts.external ?? []), "node:crypto", "module", "crypto"]; },
     // Replace Node.js crypto with our pure-JS fallback in the browser bundle
     esbuildOptions(opts) {
       opts.define = {
@@ -52,6 +56,7 @@ export default defineConfig([
     sourcemap: false,
     platform: "browser",
     esbuildOptions(opts) {
+      opts.external = [...(opts.external ?? []), "node:crypto", "module", "crypto"];
       opts.define = {
         ...opts.define,
         "process.versions": "{}",

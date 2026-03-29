@@ -255,3 +255,7 @@ export { MLDSAKeyPair, signMessage, verifyMessage, addPQSignature, verifyPQSigna
 export type { MLDSAKeyPairData } from "./pqSigning.js";
 
 export * from './mcp';
+
+// ── v2.2: Delegation and media envelope types ────────────────────────────────
+export type { V22DelegationHop, V22MediaChunk } from './delegation.js';
+export { validateV22DelegationChain, verifyV22MediaChunkHash } from './delegation.js';
