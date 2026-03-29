@@ -253,3 +253,5 @@ export type { M2MPeerClaims, M2MTrustedClaims } from "./m2m.js";
 // v2.2: ML-DSA-65 signing (FIPS 204) — Ed25519 deprecated
 export { MLDSAKeyPair, signMessage, verifyMessage, addPQSignature, verifyPQSignature } from "./pqSigning.js";
 export type { MLDSAKeyPairData } from "./pqSigning.js";
+
+export * from './mcp';
