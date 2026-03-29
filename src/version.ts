@@ -6,10 +6,10 @@
  */
 
 /** The RCAN spec version this SDK implements. */
-export const SPEC_VERSION = "2.2.0";
+export const SPEC_VERSION = "2.2.1";
 
 /** The SDK release version. */
-export const SDK_VERSION = "1.2.1";
+export const SDK_VERSION = "1.2.2";
 
 /**
  * Validate version compatibility.

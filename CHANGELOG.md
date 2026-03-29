@@ -9,6 +9,14 @@
 - `src/version.ts`: `SPEC_VERSION = "1.6"`, `SDK_VERSION = "0.6.0"`
 - `package.json`: version bumped to `0.6.0`
 
+## [1.2.2] - 2026-03-28
+
+### Changed
+- `SPEC_VERSION` updated to `2.2.1`
+- `SDK_VERSION` bumped to `1.2.2`
+- `SUPPORTED_FEATURES`: added `MULTI_TYPE_ENTITY_NUMBERING` (§21.2.2)
+
+
 ## [0.5.0] — 2026-03-16
 
 ### RCAN v1.5 Support — 18 Gaps Addressed
