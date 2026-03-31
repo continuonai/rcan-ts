@@ -1,3 +1,164 @@
+import { ml_dsa65 } from "@noble/post-quantum/ml-dsa.js";
+import { ed25519 } from "@noble/curves/ed25519.js";
+
+// ── ML-DSA-65 / Ed25519 hybrid PQC types ─────────────────────────────────────
+
+/** An ML-DSA-65 key pair (NIST FIPS 204, 192-bit PQ security). */
+export interface MlDsaKeyPair {
+  /** ML-DSA-65 secret key (4032 bytes). */
+  privateKey: Uint8Array;
+  /** ML-DSA-65 public key (1952 bytes). */
+  publicKey: Uint8Array;
+}
+
+/**
+ * Hybrid Ed25519 + ML-DSA-65 signature.
+ * Both algorithms sign the same message; verification requires both to pass.
+ */
+export interface HybridSignature {
+  profile: "pqc-hybrid-v1";
+  /** Ed25519 signature (64 bytes, base-64url decoded). */
+  ed25519Sig: Uint8Array;
+  /** ML-DSA-65 signature (3309 bytes, base-64url decoded). */
+  mlDsaSig: Uint8Array;
+}
+
+// ── base64url helpers ─────────────────────────────────────────────────────────
+
+function toB64url(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]!);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function fromB64url(s: string): Uint8Array {
+  const padded = s.replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(padded);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// ── ML-DSA-65 primitives ──────────────────────────────────────────────────────
+
+/** Generate a fresh ML-DSA-65 key pair. */
+export function generateMlDsaKeypair(): MlDsaKeyPair {
+  const kp = ml_dsa65.keygen();
+  return { privateKey: kp.secretKey, publicKey: kp.publicKey };
+}
+
+/** Sign `message` with an ML-DSA-65 secret key. Returns the raw signature. */
+export function signMlDsa(privateKey: Uint8Array, message: Uint8Array): Uint8Array {
+  return ml_dsa65.sign(message, privateKey);
+}
+
+/**
+ * Verify an ML-DSA-65 signature.
+ * @returns `true` if valid, `false` otherwise.
+ */
+export function verifyMlDsa(publicKey: Uint8Array, message: Uint8Array, sig: Uint8Array): boolean {
+  return ml_dsa65.verify(sig, message, publicKey);
+}
+
+// ── Hybrid Ed25519 + ML-DSA-65 ────────────────────────────────────────────────
+
+/**
+ * Sign `msg` with both Ed25519 and ML-DSA-65.
+ * The caller supplies both private keys; neither is derived from the other.
+ */
+export function signHybrid(
+  ed25519Priv: Uint8Array,
+  mlDsaPriv: Uint8Array,
+  msg: Uint8Array
+): HybridSignature {
+  return {
+    profile: "pqc-hybrid-v1",
+    ed25519Sig: ed25519.sign(msg, ed25519Priv),
+    mlDsaSig: ml_dsa65.sign(msg, mlDsaPriv),
+  };
+}
+
+/**
+ * Verify a hybrid signature. Both Ed25519 and ML-DSA-65 must be valid.
+ * @returns `true` only when both signatures pass.
+ */
+export function verifyHybrid(
+  ed25519Pub: Uint8Array,
+  mlDsaPub: Uint8Array,
+  msg: Uint8Array,
+  sig: HybridSignature
+): boolean {
+  if (sig.profile !== "pqc-hybrid-v1") return false;
+  return (
+    ed25519.verify(sig.ed25519Sig, msg, ed25519Pub) &&
+    ml_dsa65.verify(sig.mlDsaSig, msg, mlDsaPub)
+  );
+}
+
+// ── Encoding / decoding ───────────────────────────────────────────────────────
+
+/**
+ * Encode a HybridSignature to a compact string.
+ * Format: `pqc-hybrid-v1.<ed25519-b64url>.<mldsa-b64url>`
+ */
+export function encodeHybridSig(sig: HybridSignature): string {
+  return `pqc-hybrid-v1.${toB64url(sig.ed25519Sig)}.${toB64url(sig.mlDsaSig)}`;
+}
+
+/**
+ * Decode a hybrid signature string produced by `encodeHybridSig`.
+ * @throws if the string is not in the expected format.
+ */
+export function decodeHybridSig(s: string): HybridSignature {
+  const parts = s.split(".");
+  if (parts.length !== 3 || parts[0] !== "pqc-hybrid-v1") {
+    throw new Error(
+      `Invalid hybrid signature: expected "pqc-hybrid-v1.<ed25519b64>.<mldsab64>", got "${s.slice(0, 40)}..."`
+    );
+  }
+  return {
+    profile: "pqc-hybrid-v1",
+    ed25519Sig: fromB64url(parts[1]!),
+    mlDsaSig: fromB64url(parts[2]!),
+  };
+}
+
+// ── ML-DSA-65 JWK ─────────────────────────────────────────────────────────────
+
+/**
+ * Encode an ML-DSA-65 public key as a JWK-like object.
+ * Uses `kty: "OKP"`, `alg: "ML-DSA-65"`, `x: <base64url>`.
+ */
+export function encodeMlDsaPublicKeyJwk(pub: Uint8Array): object {
+  return {
+    kty: "OKP",
+    alg: "ML-DSA-65",
+    use: "sig",
+    x: toB64url(pub),
+  };
+}
+
+/**
+ * Decode an ML-DSA-65 public key from a JWK-like object.
+ * @throws if `kty` or `alg` fields are wrong.
+ */
+export function decodeMlDsaPublicKeyJwk(jwk: object): Uint8Array {
+  const j = jwk as Record<string, unknown>;
+  if (j["kty"] !== "OKP" || j["alg"] !== "ML-DSA-65") {
+    throw new Error(
+      `Invalid ML-DSA-65 JWK: expected kty="OKP" alg="ML-DSA-65", ` +
+        `got kty="${j["kty"]}" alg="${j["alg"]}"`
+    );
+  }
+  const x = j["x"];
+  if (typeof x !== "string" || x.length === 0) {
+    throw new Error("Invalid ML-DSA-65 JWK: missing or empty x field");
+  }
+  return fromB64url(x);
+}
+
+// ── End of PQC exports ────────────────────────────────────────────────────────
+
 /**
  * Cross-platform crypto utilities — Node.js, browser, Cloudflare Workers, Deno.
  *

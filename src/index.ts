@@ -254,6 +254,20 @@ export type { M2MPeerClaims, M2MTrustedClaims } from "./m2m.js";
 export { MLDSAKeyPair, signMessage, verifyMessage, addPQSignature, verifyPQSignature } from "./pqSigning.js";
 export type { MLDSAKeyPairData } from "./pqSigning.js";
 
+// v2.2: ML-DSA-65 PQC primitives + hybrid Ed25519+ML-DSA-65 (issue #40)
+export {
+  generateMlDsaKeypair,
+  signMlDsa,
+  verifyMlDsa,
+  signHybrid,
+  verifyHybrid,
+  encodeHybridSig,
+  decodeHybridSig,
+  encodeMlDsaPublicKeyJwk,
+  decodeMlDsaPublicKeyJwk,
+} from "./crypto.js";
+export type { MlDsaKeyPair, HybridSignature } from "./crypto.js";
+
 export * from './mcp';
 
 // ── v2.2: Delegation and media envelope types ────────────────────────────────
