@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsup",
     "postbuild": "chmod +x bin/rcan-validate.mjs",
-    "test": "node --experimental-vm-modules node_modules/.pnpm/jest@29.7.0_@types+node@25.5.0/node_modules/jest/bin/jest.js",
+    "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
