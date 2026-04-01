@@ -87,6 +87,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "overrides": {
+    "handlebars": "^4.7.9"
+  },
   "dependencies": {
     "@noble/post-quantum": "^0.5.4"
   }
