@@ -1,3 +1,11 @@
+## [1.3.0] — 2026-03-31
+
+### Added
+- `src/crypto.ts` — ML-DSA-65 post-quantum signing primitives (`MlDsaKeyPair`, `HybridSignature`, `generateMlDsaKeypair`, `signHybrid`, `verifyHybrid`, `encodeMlDsaPublicKeyJwk`)
+- `RobotURI` pqc-hybrid-v1 support in `sign()` / `verifySig()`
+- PQC signing option in M2M token helpers
+- Implements RCAN spec v2.3 pqc-hybrid-v1 profile (NIST FIPS 204 ML-DSA-65) via `@noble/post-quantum`
+
 ## [0.6.0] — 2026-03-16
 
 ### RCAN v1.6 Support — GAP-14, GAP-16, GAP-17, GAP-18
