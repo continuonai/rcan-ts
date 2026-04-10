@@ -1,3 +1,15 @@
+## [1.4.0] — 2026-04-10
+
+### Added
+- `src/watermark.ts` — AI output watermark module (RCAN §16.5): `computeWatermarkToken()`, `verifyTokenFormat()`, `verifyViaApi()`. Uses `hmacSha256SyncRawKey()` (Node crypto with pure-JS fallback) to pass raw `Uint8Array` key bytes directly, ensuring cross-language parity with the Python SDK
+- `src/crypto.ts` — `hmacSha256SyncRawKey(keyBytes, data)` and `pureHmacSha256Bytes(keyBytes, data)` for raw-key HMAC computation without UTF-8 key encoding
+- Re-exports `computeWatermarkToken`, `verifyTokenFormat`, `verifyViaApi` from `src/index.ts`
+
+### Tests
+- `tests/watermark.test.ts` — 10 tests: compute format/determinism/sensitivity, format validation, `verifyViaApi` 200/null, cross-language parity pinned to Python reference output (`d32a0ea8db075e0ec9c7c313e75a5011`)
+
+---
+
 ## [1.3.0] — 2026-03-31
 
 ### Added
