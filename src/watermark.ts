@@ -7,7 +7,7 @@
  * Token format: `rcan-wm-v1:{hex(hmac_sha256(rrn:thought_id:timestamp, key)[:16])}`
  */
 
-import { hmacSha256Sync } from "./crypto.js";
+import { hmacSha256SyncRawKey } from "./crypto.js";
 
 const WATERMARK_VERSION = "rcan-wm-v1";
 const WATERMARK_REGEX = /^rcan-wm-v1:[0-9a-f]{32}$/;
@@ -28,9 +28,8 @@ export function computeWatermarkToken(
   privateKeyBytes: Uint8Array,
 ): string {
   const message = `${rrn}:${thoughtId}:${timestamp}`;
-  // Encode key bytes as hex string for hmacSha256Sync (which accepts a string secret)
-  const keyHex = Array.from(privateKeyBytes).map(b => b.toString(16).padStart(2, "0")).join("");
-  const hex = hmacSha256Sync(keyHex, message);
+  // Pass raw key bytes directly — avoids UTF-8 encoding that would occur with a hex string key
+  const hex = hmacSha256SyncRawKey(privateKeyBytes, message);
   return `${WATERMARK_VERSION}:${hex.slice(0, 32)}`;
 }
 

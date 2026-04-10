@@ -24,6 +24,27 @@ describe("computeWatermarkToken", () => {
     const t2 = computeWatermarkToken("RRN-000000000002", THOUGHT_ID, TIMESTAMP, FAKE_KEY);
     expect(t1).not.toBe(t2);
   });
+
+  /**
+   * Cross-language reference test.
+   *
+   * The expected value is pre-computed by running the canonical Python implementation:
+   *   import hmac, hashlib
+   *   key = bytes([120] * 64)  # 'x' * 64
+   *   msg = "RRN-000000000001:thought-abc123:2026-04-10T14:32:01.123456".encode()
+   *   digest = hmac.new(key, msg, hashlib.sha256).digest()
+   *   print(digest[:16].hex())  # → d32a0ea8db075e0ec9c7c313e75a5011
+   *
+   * This pinned value proves TypeScript and Python produce identical tokens for the
+   * same raw key bytes. If this test fails after a crypto.ts change, the implementations
+   * have diverged and cross-language verification will break.
+   */
+  it("matches Python reference output for known inputs (cross-language parity)", () => {
+    // Pre-computed: hmac.new(bytes([120]*64), b"RRN-000000000001:thought-abc123:2026-04-10T14:32:01.123456", hashlib.sha256).digest()[:16].hex()
+    const PYTHON_REFERENCE_HEX = "d32a0ea8db075e0ec9c7c313e75a5011";
+    const token = computeWatermarkToken(RRN, THOUGHT_ID, TIMESTAMP, FAKE_KEY);
+    expect(token).toBe(`rcan-wm-v1:${PYTHON_REFERENCE_HEX}`);
+  });
 });
 
 describe("verifyTokenFormat", () => {

@@ -208,6 +208,32 @@ export function hmacSha256Sync(secret: string, data: string): string {
   return pureHmacSha256(secret, data);
 }
 
+/**
+ * Compute HMAC-SHA256 with a raw binary key (Uint8Array).
+ * Uses Node.js `crypto.createHmac` (which natively accepts Buffer/Uint8Array as key),
+ * falling back to a pure-JS implementation for browser / Workers / Deno.
+ *
+ * Use this instead of `hmacSha256Sync` when the key is binary (e.g. an ML-DSA-65
+ * private key) to avoid the UTF-8 encoding that would occur if the key were
+ * converted to a hex string first.
+ */
+export function hmacSha256SyncRawKey(keyBytes: Uint8Array, data: string): string {
+  // Node.js environment — createHmac accepts Buffer/Uint8Array natively
+  if (typeof process !== "undefined" && process.versions?.node) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { createHmac } = require("crypto") as {
+        createHmac: (alg: string, key: Uint8Array) => { update: (d: string) => { digest: (enc: string) => string } };
+      };
+      return createHmac("sha256", keyBytes).update(data).digest("hex");
+    } catch {
+      // fall through to pure-JS
+    }
+  }
+  // Pure-JS fallback — uses raw bytes directly, no UTF-8 conversion
+  return pureHmacSha256Bytes(keyBytes, data);
+}
+
 // ── Pure-JS SHA-256 + HMAC (no deps) ─────────────────────────────────────────
 // Based on the public-domain SHA-256 implementation.
 
@@ -283,13 +309,17 @@ function toHex(bytes: Uint8Array): string {
 }
 
 function pureHmacSha256(key: string, data: string): string {
+  return pureHmacSha256Bytes(toBytes(key), data);
+}
+
+function pureHmacSha256Bytes(keyBytes: Uint8Array, data: string): string {
   const BLOCK = 64;
-  let keyBytes = toBytes(key);
-  if (keyBytes.length > BLOCK) keyBytes = sha256(keyBytes);
+  let k = keyBytes;
+  if (k.length > BLOCK) k = sha256(k);
   const ipad = new Uint8Array(BLOCK), opad = new Uint8Array(BLOCK);
   for (let i = 0; i < BLOCK; i++) {
-    ipad[i] = (keyBytes[i] ?? 0) ^ 0x36;
-    opad[i] = (keyBytes[i] ?? 0) ^ 0x5c;
+    ipad[i] = (k[i] ?? 0) ^ 0x36;
+    opad[i] = (k[i] ?? 0) ^ 0x5c;
   }
   const dataBytes = toBytes(data);
   const inner = new Uint8Array(BLOCK + dataBytes.length);
