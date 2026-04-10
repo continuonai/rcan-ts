@@ -29,7 +29,7 @@ export function computeWatermarkToken(
 ): string {
   const message = `${rrn}:${thoughtId}:${timestamp}`;
   // Encode key bytes as hex string for hmacSha256Sync (which accepts a string secret)
-  const keyHex = Buffer.from(privateKeyBytes).toString("hex");
+  const keyHex = Array.from(privateKeyBytes).map(b => b.toString(16).padStart(2, "0")).join("");
   const hex = hmacSha256Sync(keyHex, message);
   return `${WATERMARK_VERSION}:${hex.slice(0, 32)}`;
 }
