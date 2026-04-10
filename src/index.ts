@@ -273,3 +273,5 @@ export * from './mcp';
 // ── v2.2: Delegation and media envelope types ────────────────────────────────
 export type { V22DelegationHop, V22MediaChunk } from './delegation.js';
 export { validateV22DelegationChain, verifyV22MediaChunkHash } from './delegation.js';
+
+export { computeWatermarkToken, verifyTokenFormat, verifyViaApi } from "./watermark.js";
