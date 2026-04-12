@@ -165,3 +165,59 @@ describe('EuRegisterEntry', () => {
     expect(entry.fria_submitted_at).toBe('2026-04-10T12:00:00Z');
   });
 });
+
+import { makeRegistryRegister, RegistryRegisterPayload } from '../src/message.js';
+import { MessageType } from '../src/message.js';
+
+describe('makeRegistryRegister', () => {
+  test('returns RegistryRegisterPayload with type REGISTRY_REGISTER', () => {
+    const payload = makeRegistryRegister({
+      rrn: 'RRN-000000000001',
+      robot_name: 'opencastor-rpi5',
+      public_key: 'base64pubkey',
+      verification_tier: 'community',
+      fria_ref: 'https://rcan.dev/fria/RRN-000000000001',
+    });
+    expect(payload.type).toBe(MessageType.REGISTRY_REGISTER);
+    expect(payload.rrn).toBe('RRN-000000000001');
+    expect(payload.fria_ref).toBe('https://rcan.dev/fria/RRN-000000000001');
+  });
+
+  test('metadata defaults to empty object', () => {
+    const payload = makeRegistryRegister({
+      rrn: 'RRN-000000000002',
+      robot_name: 'testbot',
+      public_key: 'pk',
+      verification_tier: 'verified',
+      fria_ref: 'https://example.com/fria/2',
+    });
+    expect(payload.metadata).toEqual({});
+  });
+
+  test('accepts custom metadata', () => {
+    const meta = { category: 'logistics', region: 'eu' };
+    const payload = makeRegistryRegister({
+      rrn: 'RRN-000000000003',
+      robot_name: 'castorbot',
+      public_key: 'pk',
+      verification_tier: 'manufacturer',
+      fria_ref: 'https://example.com/fria/3',
+      metadata: meta,
+    });
+    expect(payload.metadata).toEqual(meta);
+  });
+
+  test('accepts all four verification_tier values', () => {
+    const tiers = ['community', 'verified', 'manufacturer', 'certified'] as const;
+    for (const verification_tier of tiers) {
+      const payload = makeRegistryRegister({
+        rrn: 'RRN-000000000001',
+        robot_name: 'bot',
+        public_key: 'pk',
+        verification_tier,
+        fria_ref: 'ref',
+      });
+      expect(payload.verification_tier).toBe(verification_tier);
+    }
+  });
+});

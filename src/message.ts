@@ -422,3 +422,51 @@ export function validateDelegationChain(
   }
   return { valid: true, reason: "ok" };
 }
+
+// ── v3.0: Registry Register payload (§4 — fria_ref required) ─────────────────
+
+/** Verification tier for a robot registration. */
+export type VerificationTier = 'community' | 'verified' | 'manufacturer' | 'certified';
+
+/**
+ * Payload for a REGISTRY_REGISTER message.
+ * BREAKING CHANGE in RCAN v3.0: fria_ref is required.
+ */
+export interface RegistryRegisterPayload {
+  readonly type: typeof MessageType.REGISTRY_REGISTER;
+  /** Robot Registration Number */
+  readonly rrn: string;
+  /** Human-readable robot name */
+  readonly robot_name: string;
+  /** Base64url-encoded Ed25519 or ML-DSA-65 public key */
+  readonly public_key: string;
+  /** Robot verification tier */
+  readonly verification_tier: VerificationTier;
+  /** Reference URI to the submitted FRIA document. Required in RCAN v3.0. */
+  readonly fria_ref: string;
+  /** Arbitrary metadata key-value pairs */
+  readonly metadata: Record<string, unknown>;
+}
+
+/**
+ * Build a REGISTRY_REGISTER message payload.
+ * fria_ref is required as of RCAN v3.0.
+ */
+export function makeRegistryRegister(params: {
+  rrn: string;
+  robot_name: string;
+  public_key: string;
+  verification_tier: VerificationTier;
+  fria_ref: string;
+  metadata?: Record<string, unknown>;
+}): RegistryRegisterPayload {
+  return {
+    type: MessageType.REGISTRY_REGISTER,
+    rrn: params.rrn,
+    robot_name: params.robot_name,
+    public_key: params.public_key,
+    verification_tier: params.verification_tier,
+    fria_ref: params.fria_ref,
+    metadata: params.metadata ?? {},
+  };
+}
