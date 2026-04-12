@@ -1,7 +1,7 @@
 {
   "name": "@continuonai/rcan-ts",
-  "version": "1.4.0",
-  "description": "Official TypeScript SDK for the RCAN v1.6 robot communication protocol",
+  "version": "2.0.0",
+  "description": "Official TypeScript SDK for the RCAN v3.0 robot communication protocol",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

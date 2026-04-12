@@ -1,3 +1,19 @@
+## [2.0.0] — 2026-04-12
+
+### Breaking Changes
+- **REGISTRY_REGISTER**: `fria_ref` is now required in `RegistryRegisterPayload` (RCAN v3.0)
+- **SPEC_VERSION**: bumped to `"3.0"` (was `"2.2.1"`)
+
+### Added
+- `src/compliance.ts`: TypeScript interfaces for RCAN v3.0 compliance schemas
+  - `FriaSigningKey`, `FriaConformance`, `FriaDocument` (§22)
+  - `SafetyBenchmark` (§23)
+  - `InstructionsForUse` (§24)
+  - `PostMarketIncident` (§25)
+  - `EuRegisterEntry` (§26)
+- `RegistryRegisterPayload` interface — documents required `fria_ref` field
+- `makeRegistryRegister()` helper — builds a typed REGISTRY_REGISTER payload
+
 ## [1.4.0] — 2026-04-10
 
 ### Added

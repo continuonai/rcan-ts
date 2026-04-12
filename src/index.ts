@@ -275,3 +275,21 @@ export type { V22DelegationHop, V22MediaChunk } from './delegation.js';
 export { validateV22DelegationChain, verifyV22MediaChunkHash } from './delegation.js';
 
 export { computeWatermarkToken, verifyTokenFormat, verifyViaApi } from "./watermark.js";
+
+// ── v3.0: Compliance schema types (§22–§26) ──────────────────────────────────
+export type {
+  FriaSigningKey,
+  FriaConformance,
+  FriaDocument,
+  SafetyBenchmark,
+  InstructionsForUse,
+  PostMarketIncident,
+  EuRegisterEntry,
+  IncidentSeverity,
+  IncidentStatus,
+  EuComplianceStatus,
+} from './compliance.js';
+
+// ── v3.0: RegistryRegisterPayload + makeRegistryRegister ─────────────────────
+export type { RegistryRegisterPayload, VerificationTier } from './message.js';
+export { makeRegistryRegister } from './message.js';

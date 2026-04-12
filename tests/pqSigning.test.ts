@@ -9,7 +9,7 @@ import { MLDSAKeyPair, signMessage, verifyMessage } from "../src/pqSigning.js";
 const TEST_TARGET = "rcan://rrf.rcan.dev/test/robot/v1/unit-001";
 
 function makeMsg(): RCANMessage {
-  return new RCANMessage({ cmd: "test_cmd", target: TEST_TARGET, params: { x: 1 }, rcan: "2.2.1" });
+  return new RCANMessage({ cmd: "test_cmd", target: TEST_TARGET, params: { x: 1 }, rcan: "3.0" });
 }
 
 describe("MLDSAKeyPair", () => {
