@@ -1,9 +1,16 @@
-name: Publish to npm
+name: Release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish_npm:
+        description: "Publish to npm (requires NPM_TOKEN secret)"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -11,6 +18,8 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    outputs:
+      package: ${{ steps.pack.outputs.filename }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,12 +29,51 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - name: Pack tarball
+        id: pack
+        run: |
+          name=$(npm pack --silent)
+          echo "filename=$name" >> "$GITHUB_OUTPUT"
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: |
+            dist/
+            *.tgz
+          if-no-files-found: error
 
-  publish:
+  github-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: artifacts/
+      - name: Extract tag message
+        id: tag
+        run: |
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          git tag -l --format='%(contents)' ${{ github.ref_name }} >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.tag.outputs.message }}
+          generate_release_notes: true
+          files: artifacts/*.tgz
+
+  npm-publish:
+    # Manual-only until NPM_TOKEN is configured for continuonai/rcan-ts.
+    # Trigger via Actions → Release → Run workflow → publish_npm=true.
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.publish_npm == 'true'
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
@@ -35,11 +83,8 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org
           cache: npm
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
       - run: npm ci
+      - run: npm run build
       - name: Publish to npm
         run: npm publish --access public
         env:
