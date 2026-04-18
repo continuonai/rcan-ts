@@ -1,3 +1,30 @@
+## [2.1.0] — 2026-04-18
+
+### Added
+
+- **`fromManifest(frontmatter)`** — cross-link to the ROBOT.md file
+  format. Takes a parsed ROBOT.md frontmatter object and returns a
+  `ManifestInfo` with `rrn`, `rcanUri`, `endpoint`
+  (`network.rrf_endpoint`), `signingAlg`, `publicResolver`,
+  `robotName`, and `rcanVersion`. Zero-dependency: caller brings their
+  own YAML parser.
+
+  ```typescript
+  import fs from "node:fs";
+  import yaml from "js-yaml";
+  import { fromManifest } from "rcan-ts";
+
+  const raw = fs.readFileSync("./ROBOT.md", "utf-8");
+  const body = raw.split("---")[1];
+  const fm = yaml.load(body) as Record<string, unknown>;
+  const info = fromManifest(fm);
+  console.log(info.rrn, info.endpoint, info.publicResolver);
+  ```
+
+See <https://robotmd.dev> for the ROBOT.md spec.
+
+---
+
 ## [2.0.0] — 2026-04-12
 
 ### Breaking Changes
