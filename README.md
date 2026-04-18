@@ -2,7 +2,7 @@
 
 TypeScript SDK for the [RCAN protocol](https://rcan.dev/spec/) — build robots that communicate securely, audit every action, and enforce safety gates in Node.js or the browser.
 
-[![npm version](https://img.shields.io/npm/v/@continuonai/rcan-ts.svg)](https://www.npmjs.com/package/@continuonai/rcan-ts)
+[![npm version](https://img.shields.io/npm/v/rcan-ts.svg)](https://www.npmjs.com/package/rcan-ts)
 [![RCAN Spec](https://img.shields.io/badge/RCAN-v1.6-blue)](https://rcan.dev/spec/)
 [![CI](https://github.com/continuonai/rcan-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/continuonai/rcan-ts/actions)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -11,7 +11,7 @@ TypeScript SDK for the [RCAN protocol](https://rcan.dev/spec/) — build robots 
 ## Install
 
 ```bash
-npm install @continuonai/rcan-ts@0.6.0
+npm install rcan-ts
 ```
 
 Node 18+ required (uses Web Crypto API for `transport.encodeMinimal`).
@@ -19,7 +19,7 @@ Node 18+ required (uses Web Crypto API for `transport.encodeMinimal`).
 ### Browser / CDN (no build step)
 
 ```html
-<script src="https://unpkg.com/@continuonai/rcan-ts/dist/rcan.iife.js"></script>
+<script src="https://unpkg.com/rcan-ts/dist/rcan.iife.js"></script>
 <script>
   const uri = RCAN.RobotURI.parse('rcan://registry.rcan.dev/acme/arm/v1/unit-001');
   console.log(uri.manufacturer); // acme
@@ -29,9 +29,9 @@ Node 18+ required (uses Web Crypto API for `transport.encodeMinimal`).
 ## Quick Start
 
 ```typescript
-import { RobotURI, RCANMessage, ConfidenceGate } from "@continuonai/rcan-ts";
-import { ReplayCache } from "@continuonai/rcan-ts";
-import { AuditChain } from "@continuonai/rcan-ts";
+import { RobotURI, RCANMessage, ConfidenceGate } from "rcan-ts";
+import { ReplayCache } from "rcan-ts";
+import { AuditChain } from "rcan-ts";
 
 // 1. Address a robot
 const uri = RobotURI.build({
@@ -120,7 +120,7 @@ const jsonl = chain.toJSONL();
 ## Registry Resolution
 
 ```typescript
-import { NodeClient } from "@continuonai/rcan-ts";
+import { NodeClient } from "rcan-ts";
 
 const client = new NodeClient();
 
