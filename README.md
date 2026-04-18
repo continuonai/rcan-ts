@@ -1,12 +1,26 @@
 # rcan-ts
 
-TypeScript SDK for the [RCAN protocol](https://rcan.dev/spec/) — build robots that communicate securely, audit every action, and enforce safety gates in Node.js or the browser.
+**TypeScript SDK for the [RCAN protocol](https://rcan.dev/spec/) v3.0.** Build robots that communicate securely, audit every action, and enforce safety gates — in Node.js or the browser.
 
 [![npm version](https://img.shields.io/npm/v/rcan-ts.svg)](https://www.npmjs.com/package/rcan-ts)
-[![RCAN Spec](https://img.shields.io/badge/RCAN-v1.6-blue)](https://rcan.dev/spec/)
+[![RCAN Spec](https://img.shields.io/badge/RCAN-v3.0-blue)](https://rcan.dev/spec/)
 [![CI](https://github.com/continuonai/rcan-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/continuonai/rcan-ts/actions)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Node](https://img.shields.io/badge/node-18%2B-green)](https://nodejs.org)
+
+## Where this fits in the stack
+
+This repo is the **TypeScript SDK** layer — the library any JS/TS planner, gateway, or browser-side tool links against to speak RCAN. Everything below is independent; adopt one, or all seven.
+
+| Layer | Piece | What it is |
+|---|---|---|
+| **Declaration** | [ROBOT.md](https://github.com/RobotRegistryFoundation/robot-md) | The file a robot ships at its root. YAML frontmatter + markdown prose. Spec + Python CLI. |
+| **Agent bridge** | [robot-md-mcp](https://github.com/RobotRegistryFoundation/robot-md-mcp) | MCP server that exposes a `ROBOT.md` to Claude Code, Cursor, Zed, Gemini CLI — any MCP-aware agent. |
+| **Wire protocol** | [RCAN](https://rcan.dev/spec/) | How robots, gateways, and planners talk. Signed envelopes, LoA enforcement, PQC crypto. Think HTTP for robots. |
+| **Python SDK** | [rcan-py](https://github.com/continuonai/rcan-py) | `pip install rcan` — `RCANMessage`, `RobotURI`, `ConfidenceGate`, `HiTLGate`, `AuditChain`, `RegistryClient`. |
+| **TypeScript SDK** ← *this* | [rcan-ts](https://github.com/continuonai/rcan-ts) | `npm install rcan-ts` — same API surface for Node + browser. |
+| **Registry** | [Robot Registry Foundation](https://robotregistryfoundation.org) | Permanent RRN identities. Public resolver at `/r/<rrn>`. Like ICANN for robots. |
+| **Reference runtime** | [OpenCastor](https://github.com/craigm26/OpenCastor) | Open-source robot runtime — connects LLM brains to hardware bodies. One implementation of RCAN. |
 
 ## Install
 
