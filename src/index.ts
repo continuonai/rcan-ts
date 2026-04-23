@@ -297,3 +297,8 @@ export type {
 // ── v3.0: RegistryRegisterPayload + makeRegistryRegister ─────────────────────
 export type { RegistryRegisterPayload, VerificationTier } from './message.js';
 export { makeRegistryRegister } from './message.js';
+
+// ── v3.1 consolidation — canonical JSON + dict-level hybrid signing ──────────
+export { canonicalJson } from "./encoding.js";
+export { signBody, verifyBody } from "./hybrid.js";
+export type { SignBodyOptions } from "./hybrid.js";
