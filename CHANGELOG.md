@@ -1,3 +1,41 @@
+## [3.1.0] — 2026-04-23
+
+### Added
+
+- **`canonicalJson(obj)`** — deterministic UTF-8 bytes (new
+  `src/encoding.ts`). Byte-parity with rcan-py `canonical_json` is
+  guaranteed by the shared `rcan-spec/fixtures/canonical-json-v1.json`
+  fixture.
+- **`signBody(keypair, body, opts)` / `verifyBody(signed, pqSigningPub)`**
+  — dict-level hybrid ML-DSA-65 + Ed25519 signing (new `src/hybrid.ts`).
+  Wire-compatible with RobotRegistryFoundation's `/v2/*/register` endpoints.
+- **Top-level re-exports** in `src/index.ts` — `import { canonicalJson,
+  signBody, verifyBody } from "rcan-ts"` works.
+
+### Why
+
+Ecosystem audit (2026-04-23) found RobotRegistryFoundation had
+reimplemented canonical JSON and hybrid verification locally in
+`functions/_lib/verify.ts`, bypassing rcan-ts entirely. 3.1.0 provides
+the upstream surface so RRF can delete its local copy.
+
+### Not added (YAGNI)
+
+- Compliance artifact builders (§22–26) — no TS consumer emits these
+  today (robot-md is Python). Tracked for a future rcan-ts 3.2.0.
+
+### Downstream
+
+- `RobotRegistryFoundation` deploy (same release cycle) swaps
+  `functions/_lib/verify.ts` for imports from `rcan-ts`.
+
+### First npm publish since 2.1.0
+
+rcan-ts `3.0.0` was never published to npm — this release jumps
+directly from 2.1.0 (current npm `latest`) to 3.1.0.
+
+---
+
 ## [3.0.0] — 2026-04-21
 
 ### Added
