@@ -51,7 +51,8 @@ function toHex(bytes: Uint8Array): string {
 }
 
 async function subtle(): Promise<SubtleCrypto> {
-  return (globalThis.crypto ?? (await import("node:crypto")).webcrypto).subtle;
+  const cryptoModule = "node:crypto";
+  return (globalThis.crypto ?? ((await import(cryptoModule)) as typeof import("node:crypto")).webcrypto).subtle;
 }
 
 async function kidFromPub(mlDsaPub: Uint8Array): Promise<string> {

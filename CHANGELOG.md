@@ -1,3 +1,22 @@
+## [3.1.1] — 2026-04-23
+
+### Fixed
+
+- Build: the `node:crypto` fallback import in `src/hybrid.ts`,
+  `src/multimodal.ts`, and `src/transport.ts` was being statically
+  rewritten by esbuild to `"crypto"` (no prefix) in the published
+  `dist/*.mjs` outputs, causing `Could not resolve "crypto"` errors
+  when consumers bundled rcan-ts for Cloudflare Workers / Wrangler.
+  Fixed by moving the import specifier into a variable (`const
+  cryptoModule = "node:crypto"; await import(cryptoModule)`) so
+  esbuild cannot resolve the specifier at build time. The previous
+  `as string` cast attempt did not survive TypeScript compilation —
+  esbuild still saw the literal. No runtime behavior change — the
+  `globalThis.crypto?.subtle ??` short-circuit still handles the
+  modern Node/Workers path without hitting the fallback.
+
+---
+
 ## [3.1.0] — 2026-04-23
 
 ### Added
