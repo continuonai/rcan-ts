@@ -197,3 +197,136 @@ export const SUBMISSION_INSTRUCTIONS: string =
   "Submit this package to the EU AI Act database at " +
   "https://ec.europa.eu/digital-strategy/en/policies/european-ai-act. " +
   "Include the referenced rcan-fria-v1 JSON as an attachment.";
+
+// ═════════════════════════════════════════════════════════════════════
+// Builders — v3.1 spec-shaped envelopes ready to canonicalize + sign
+//
+// Each builder is a pure function: takes snake_case kwargs matching
+// rcan-py's build_* signature, returns a plain object whose
+// canonicalJson() is byte-identical to rcan-py's output.
+//
+// Do NOT translate keys or add fields — the compliance-v1 fixture
+// enforces exact parity.
+// ═════════════════════════════════════════════════════════════════════
+
+/**
+ * Build a §23 rcan-safety-benchmark-v1 envelope.
+ *
+ * @param opts.iterations - Number of samples per path.
+ * @param opts.thresholds - Threshold map keyed by `{path}_p95_ms` (caller-named).
+ * @param opts.results - Path name → stats object (min_ms/mean_ms/p95_ms/p99_ms/max_ms/pass).
+ * @param opts.mode - Run mode, e.g. "synthetic" or "hardware".
+ * @param opts.generated_at - ISO-8601 UTC timestamp (caller formats).
+ * @param opts.overall_pass - Whether every path passed its threshold.
+ * @returns Envelope ready to serialize via canonicalJson and sign via signBody.
+ */
+export function buildSafetyBenchmark(opts: {
+  iterations: number;
+  thresholds: Record<string, number>;
+  results: Record<string, unknown>;
+  mode: string;
+  generated_at: string;
+  overall_pass: boolean;
+}): SafetyBenchmark {
+  return {
+    schema: SAFETY_BENCHMARK_SCHEMA,
+    generated_at: opts.generated_at,
+    mode: opts.mode,
+    iterations: opts.iterations,
+    thresholds: opts.thresholds,
+    results: opts.results,
+    overall_pass: opts.overall_pass,
+  };
+}
+
+/**
+ * Build a §24 rcan-ifu-v1 envelope (EU AI Act Art. 13(3)).
+ *
+ * All 8 Art. 13(3) sections are required. `art13_coverage` is emitted
+ * automatically from the `ART13_COVERAGE` constant.
+ */
+export function buildIfu(opts: {
+  provider_identity: Record<string, unknown>;
+  intended_purpose: Record<string, unknown>;
+  capabilities_and_limitations: Record<string, unknown>;
+  accuracy_and_performance: Record<string, unknown>;
+  human_oversight_measures: Record<string, unknown>;
+  known_risks_and_misuse: Record<string, unknown>;
+  expected_lifetime: Record<string, unknown>;
+  maintenance_requirements: Record<string, unknown>;
+  generated_at: string;
+}): InstructionsForUse {
+  return {
+    schema: IFU_SCHEMA,
+    generated_at: opts.generated_at,
+    art13_coverage: [...ART13_COVERAGE],
+    provider_identity: opts.provider_identity,
+    intended_purpose: opts.intended_purpose,
+    capabilities_and_limitations: opts.capabilities_and_limitations,
+    accuracy_and_performance: opts.accuracy_and_performance,
+    human_oversight_measures: opts.human_oversight_measures,
+    known_risks_and_misuse: opts.known_risks_and_misuse,
+    expected_lifetime: opts.expected_lifetime,
+    maintenance_requirements: opts.maintenance_requirements,
+  };
+}
+
+/**
+ * Build a §25 rcan-incidents-v1 envelope (EU AI Act Art. 72 post-market).
+ *
+ * Auto-computes `total_incidents = opts.incidents.length` and
+ * `incidents_by_severity` (seeded with VALID_SEVERITIES keys at 0,
+ * incremented for each known severity). Unknown severities are silently
+ * ignored — mirrors rcan-py behavior.
+ */
+export function buildIncidentReport(opts: {
+  rrn: string;
+  incidents: readonly Record<string, unknown>[];
+  generated_at: string;
+}): PostMarketIncidentReport {
+  const bySeverity: Record<IncidentSeverity, number> = { life_health: 0, other: 0 };
+  for (const entry of opts.incidents) {
+    const sev = entry.severity;
+    if (sev === "life_health" || sev === "other") {
+      bySeverity[sev] += 1;
+    }
+  }
+  return {
+    schema: INCIDENT_REPORT_SCHEMA,
+    generated_at: opts.generated_at,
+    rrn: opts.rrn,
+    total_incidents: opts.incidents.length,
+    incidents_by_severity: bySeverity,
+    reporting_deadlines: { ...REPORTING_DEADLINES },
+    art72_note: ART72_NOTE,
+    incidents: [...opts.incidents],
+  };
+}
+
+/**
+ * Build a §26 rcan-eu-register-v1 envelope (EU AI Act Art. 49).
+ *
+ * `conformity_status` defaults to `CONFORMITY_STATUS_DECLARED` ("declared")
+ * and `submission_instructions` defaults to `SUBMISSION_INSTRUCTIONS` when
+ * omitted or `undefined`.
+ */
+export function buildEuRegisterEntry(opts: {
+  fria_ref: string;
+  provider: Record<string, unknown>;
+  system: Record<string, unknown>;
+  annex_iii_basis: string;
+  generated_at: string;
+  conformity_status?: string;
+  submission_instructions?: string;
+}): EuRegisterEntry {
+  return {
+    schema: EU_REGISTER_SCHEMA,
+    generated_at: opts.generated_at,
+    fria_ref: opts.fria_ref,
+    provider: opts.provider,
+    system: opts.system,
+    annex_iii_basis: opts.annex_iii_basis,
+    conformity_status: opts.conformity_status ?? CONFORMITY_STATUS_DECLARED,
+    submission_instructions: opts.submission_instructions ?? SUBMISSION_INSTRUCTIONS,
+  };
+}
