@@ -1,3 +1,54 @@
+## [3.4.0] — 2026-04-23
+
+### Added
+
+- **`agent.runtimes[]` support** (rcan-spec v3.2 §8.6) — ROBOT.md manifests
+  can now declare multiple supported runtimes (e.g. robot-md + opencastor)
+  on one robot identity. This release adds the TypeScript SDK layer.
+- **`AgentRuntime` interface** — one entry in `agent.runtimes[]`. Required
+  fields: `id` (string), `harness` (string). Optional: `default` (boolean,
+  exactly-one-when-multi), `models` (runtime-interpreted array),
+  plus arbitrary runtime-specific pass-through fields.
+- **`AgentRuntimesBlock` type** — `AgentRuntime[] | null`.
+- **`normalizeAgent(agent)` helper** — converts a legacy flat
+  `agent.provider`/`agent.model` block into the v3.2 `runtimes[]` shape,
+  emitting a `console.warn` deprecation notice. Structured `runtimes[]`
+  passes through unchanged. Both-forms-at-once throws.
+- **`validateAgentRuntimes(runtimes)` helper** — returns a list of human-
+  readable error strings. Enforces required `id`+`harness` on every entry
+  and exactly-one-default when `runtimes[]` has two or more entries.
+  Unknown per-entry fields are allowed (runtime pass-through).
+- **`ManifestInfo.agentRuntimes`** — normalized list available from
+  `fromManifest()`; `null` when no agent block is declared.
+
+### Changed (internal — non-breaking for existing consumers)
+
+- `SPEC_VERSION` bumped to `"3.2"` (was `"3.0"`); `SDK_VERSION` bumped to
+  `"3.4.0"` (was `"3.0.0"`). package.json `description` updated to
+  reference "RCAN v3.2".
+
+### Deprecated
+
+- Flat `agent.provider`/`agent.model` form in ROBOT.md frontmatter. Still
+  accepted in v3.2; emits `console.warn`. Scheduled for removal in
+  rcan-spec v4.0. Migrate by declaring `agent.runtimes[]` instead.
+
+### Byte-parity
+
+- `tests/fixtures/compliance-v1.json` unchanged. This release does not
+  touch §22–26 compliance builders or the canonical-json/hybrid signer
+  path — all existing compliance-fixture tests pass unmodified.
+
+### Parity
+
+- Mirrors rcan-py 3.3.0 (`pip install rcan==3.3.0`): same helper
+  semantics, same deprecation threshold, same field rules. Cross-SDK
+  error strings share the `"both flat 'provider'/'model' and runtimes[]"`
+  substring to keep diffs clean.
+- rcan-py 3.3.0 ⇔ rcan-spec v3.2 ⇔ rcan-ts 3.4.0.
+
+---
+
 ## [3.3.0] — 2026-04-24
 
 ### Changed (breaking for §26 callers)
