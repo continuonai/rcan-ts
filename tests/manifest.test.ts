@@ -3,7 +3,7 @@
  */
 
 import { jest } from "@jest/globals";
-import { fromManifest, normalizeAgent, type ManifestInfo } from "../src/manifest.js";
+import { fromManifest, normalizeAgent, validateAgentRuntimes, type ManifestInfo } from "../src/manifest.js";
 
 const BOB_FM = {
   rcan_version: "3.0",
@@ -153,5 +153,69 @@ describe("normalizeAgent", () => {
     expect(() => normalizeAgent(agent)).toThrow(
       /both flat.*and runtimes/,
     );
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// validateAgentRuntimes (rcan-spec v3.2 §8.6 field rules)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("validateAgentRuntimes", () => {
+  test("single entry with no default is valid", () => {
+    const errors = validateAgentRuntimes([
+      { id: "robot-md", harness: "claude-code" },
+    ]);
+    expect(errors).toEqual([]);
+  });
+
+  test("multiple entries require exactly one default: true", () => {
+    // zero defaults → error
+    const zeroErrs = validateAgentRuntimes([
+      { id: "robot-md", harness: "claude-code" },
+      { id: "opencastor", harness: "castor-default" },
+    ]);
+    expect(zeroErrs.length).toBeGreaterThan(0);
+    expect(zeroErrs.join(" ")).toMatch(/exactly one default/);
+
+    // two defaults → error
+    const twoErrs = validateAgentRuntimes([
+      { id: "robot-md", harness: "claude-code", default: true },
+      { id: "opencastor", harness: "castor-default", default: true },
+    ]);
+    expect(twoErrs.length).toBeGreaterThan(0);
+
+    // exactly one default → no error
+    const oneErrs = validateAgentRuntimes([
+      { id: "robot-md", harness: "claude-code", default: true },
+      { id: "opencastor", harness: "castor-default" },
+    ]);
+    expect(oneErrs).toEqual([]);
+  });
+
+  test("every entry must have non-empty id and harness", () => {
+    const missingId = validateAgentRuntimes([
+      { id: "", harness: "claude-code" } as never,
+    ]);
+    expect(missingId.join(" ")).toMatch(/id/);
+
+    const missingHarness = validateAgentRuntimes([
+      { id: "robot-md", harness: "" } as never,
+    ]);
+    expect(missingHarness.join(" ")).toMatch(/harness/);
+
+    const bothMissing = validateAgentRuntimes([{} as never]);
+    expect(bothMissing.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("unknown runtime-specific fields pass through (no error)", () => {
+    const errors = validateAgentRuntimes([
+      {
+        id: "opencastor",
+        harness: "castor-default",
+        custom_future_field: "anything",
+        models: [{ provider: "local", model: "pi0" }],
+      },
+    ]);
+    expect(errors).toEqual([]);
   });
 });

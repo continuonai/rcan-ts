@@ -144,6 +144,47 @@ export function normalizeAgent(
 }
 
 /**
+ * Validate an `agent.runtimes[]` list per rcan-spec v3.2 §8.6 rules.
+ *
+ * @returns list of human-readable error strings. Empty array means valid.
+ *
+ * Rules:
+ * - Every entry MUST have non-empty string `id` and `harness`.
+ * - If `runtimes[]` has two or more entries, exactly one MUST be `default: true`.
+ * - Unknown per-entry fields are allowed (runtime-specific pass-through).
+ *
+ * @see rcan-py `rcan.manifest._validate_agent_runtimes` (parity)
+ */
+export function validateAgentRuntimes(runtimes: AgentRuntime[]): string[] {
+  const errors: string[] = [];
+  let defaults = 0;
+  for (let i = 0; i < runtimes.length; i++) {
+    const entry = runtimes[i];
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`runtimes[${i}] must be an object`);
+      continue;
+    }
+    if (typeof entry.id !== "string" || entry.id.length === 0) {
+      errors.push(`runtimes[${i}] missing required field: id`);
+    }
+    if (typeof entry.harness !== "string" || entry.harness.length === 0) {
+      errors.push(`runtimes[${i}] missing required field: harness`);
+    }
+    if (entry.default === true) {
+      defaults += 1;
+    }
+  }
+
+  if (runtimes.length >= 2 && defaults !== 1) {
+    errors.push(
+      `runtimes[] with ${runtimes.length} entries must have exactly one default: true ` +
+        `(found ${defaults})`,
+    );
+  }
+  return errors;
+}
+
+/**
  * Extract RCAN-relevant fields from a parsed ROBOT.md frontmatter object.
  *
  * @param frontmatter - The parsed YAML frontmatter dict (from js-yaml or similar).
