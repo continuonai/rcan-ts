@@ -70,6 +70,80 @@ export interface ManifestInfo {
 }
 
 /**
+ * Normalize the `agent` frontmatter block into the v3.2 `runtimes[]` shape.
+ *
+ * - `null`/`undefined`/empty object → `null`
+ * - Structured `runtimes[]` → returned as-is
+ * - Flat form (`provider`/`model` without `runtimes`) → wrapped in a
+ *   single-entry `runtimes[]` with `default: true`. A `console.warn`
+ *   deprecation notice is emitted; flat form is scheduled for removal in
+ *   rcan-spec v4.0.
+ * - Both flat keys AND `runtimes[]` present → throws `Error` (ambiguous).
+ *
+ * @see rcan-spec v3.2 §8.6 Multi-Runtime Agent Declaration
+ * @see rcan-py `rcan.manifest._normalize_agent` (parity)
+ */
+export function normalizeAgent(
+  agent: Record<string, unknown> | null | undefined,
+): AgentRuntime[] | null {
+  if (!agent || typeof agent !== "object" || Array.isArray(agent)) {
+    return null;
+  }
+  if (Object.keys(agent).length === 0) {
+    return null;
+  }
+
+  const runtimes = (agent as Record<string, unknown>).runtimes;
+  const hasFlat = "provider" in agent || "model" in agent;
+
+  if (runtimes !== undefined && hasFlat) {
+    throw new Error(
+      "agent block declares both flat 'provider'/'model' and runtimes[] — " +
+        "use one or the other. Flat form is deprecated; prefer runtimes[].",
+    );
+  }
+
+  if (runtimes !== undefined) {
+    if (!Array.isArray(runtimes)) {
+      throw new Error("agent.runtimes must be an array");
+    }
+    return runtimes as AgentRuntime[];
+  }
+
+  if (hasFlat) {
+    console.warn(
+      "[rcan-ts] flat agent.provider/agent.model form is deprecated in " +
+        "rcan-spec v3.2; use agent.runtimes[] instead. Removal scheduled " +
+        "for v4.0.",
+    );
+    const entry: AgentRuntime = {
+      id: "robot-md",
+      harness: "default",
+      default: true,
+      models: [
+        {
+          provider: agent.provider,
+          model: agent.model,
+          role: "primary",
+        },
+      ],
+    };
+    for (const passthrough of [
+      "latency_budget_ms",
+      "safety_stop",
+      "vision_enabled",
+    ]) {
+      if (passthrough in agent) {
+        entry[passthrough] = (agent as Record<string, unknown>)[passthrough];
+      }
+    }
+    return [entry];
+  }
+
+  return null;
+}
+
+/**
  * Extract RCAN-relevant fields from a parsed ROBOT.md frontmatter object.
  *
  * @param frontmatter - The parsed YAML frontmatter dict (from js-yaml or similar).

@@ -2,7 +2,8 @@
  * Tests for fromManifest — ROBOT.md cross-link.
  */
 
-import { fromManifest, type ManifestInfo } from "../src/manifest.js";
+import { jest } from "@jest/globals";
+import { fromManifest, normalizeAgent, type ManifestInfo } from "../src/manifest.js";
 
 const BOB_FM = {
   rcan_version: "3.0",
@@ -90,5 +91,67 @@ describe("fromManifest", () => {
     expect(info.robotName).toBeNull();
     expect(info.rcanVersion).toBeNull();
     expect(info.frontmatter).toEqual({});
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// normalizeAgent (rcan-spec v3.2 §8.6)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("normalizeAgent", () => {
+  test("null/undefined/empty → null", () => {
+    expect(normalizeAgent(null)).toBeNull();
+    expect(normalizeAgent(undefined)).toBeNull();
+    expect(normalizeAgent({})).toBeNull();
+  });
+
+  test("structured runtimes[] returned as-is, no warning", () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const agent = {
+      runtimes: [
+        { id: "robot-md", harness: "claude-code", default: true },
+        { id: "opencastor", harness: "castor-default" },
+      ],
+    };
+    const out = normalizeAgent(agent);
+    expect(out).toEqual(agent.runtimes);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  test("flat form wrapped + emits deprecation console.warn", () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const agent = {
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      latency_budget_ms: 200,
+      safety_stop: true,
+    };
+    const out = normalizeAgent(agent);
+    expect(out).toHaveLength(1);
+    expect(out?.[0]?.id).toBe("robot-md");
+    expect(out?.[0]?.harness).toBe("default");
+    expect(out?.[0]?.default).toBe(true);
+    expect((out?.[0]?.models as Array<Record<string, unknown>>)?.[0]).toEqual({
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      role: "primary",
+    });
+    expect(out?.[0]?.latency_budget_ms).toBe(200);
+    expect(out?.[0]?.safety_stop).toBe(true);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toMatch(/deprecated/);
+    expect(warnSpy.mock.calls[0]?.[0]).toMatch(/agent\.runtimes/);
+    warnSpy.mockRestore();
+  });
+
+  test("both flat form AND runtimes[] → throws", () => {
+    const agent = {
+      provider: "anthropic",
+      runtimes: [{ id: "robot-md", harness: "claude-code" }],
+    };
+    expect(() => normalizeAgent(agent)).toThrow(
+      /both flat.*and runtimes/,
+    );
   });
 });
