@@ -20,6 +20,36 @@
  *   console.log(info.publicResolver); // "https://rcan.dev/r/RRN-000000000003"
  */
 
+/**
+ * A single agent runtime declaration inside a ROBOT.md `agent.runtimes[]` block.
+ *
+ * Mirrors rcan-spec v3.2 §8.6. Required fields are `id` and `harness`; everything
+ * else is runtime-interpreted pass-through. Unknown fields are allowed.
+ *
+ * @see https://rcan.dev/spec/section-8/#multi-runtime
+ */
+export interface AgentRuntime {
+  /** Runtime identifier (e.g. "robot-md", "opencastor"). Required. */
+  id: string;
+  /** Runtime-specific harness name (e.g. "claude-code", "castor-default"). Required. */
+  harness: string;
+  /** Exactly one entry may be default when runtimes[] has 2+ entries. */
+  default?: boolean;
+  /** Runtime-interpreted. Shape varies by harness. */
+  models?: Array<Record<string, unknown>>;
+  /** Runtime-specific pass-through fields are allowed. */
+  [key: string]: unknown;
+}
+
+/**
+ * The `agent:` block in ROBOT.md frontmatter once normalized to v3.2 shape.
+ * A list of one or more `AgentRuntime` entries. `null` if the manifest has no
+ * agent block.
+ *
+ * @see rcan-py `agent_runtimes: list[dict] | None`
+ */
+export type AgentRuntimesBlock = AgentRuntime[] | null;
+
 export interface ManifestInfo {
   /** RRN if the robot is registered, else null. */
   rrn: string | null;
