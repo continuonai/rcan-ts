@@ -1,6 +1,6 @@
 {
   "name": "rcan-ts",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "Official TypeScript SDK for the RCAN v3.2 robot communication protocol",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -31,7 +31,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/continuonai/rcan-ts"
+    "url": "git+https://github.com/continuonai/rcan-ts.git"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
@@ -76,7 +76,7 @@
   "unpkg": "./dist/rcan.iife.js",
   "jsdelivr": "./dist/rcan.iife.js",
   "bin": {
-    "rcan-validate": "./bin/rcan-validate.mjs"
+    "rcan-validate": "bin/rcan-validate.mjs"
   },
   "files": [
     "dist",
@@ -92,5 +92,13 @@
   },
   "dependencies": {
     "@noble/post-quantum": "^0.5.4"
-  }
+  },
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "bugs": {
+    "url": "https://github.com/continuonai/rcan-ts/issues"
+  },
+  "homepage": "https://github.com/continuonai/rcan-ts#readme"
 }

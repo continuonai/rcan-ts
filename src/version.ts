@@ -9,7 +9,7 @@
 export const SPEC_VERSION = "3.2";
 
 /** The SDK release version. */
-export const SDK_VERSION = "3.4.0";
+export const SDK_VERSION = "3.4.1";
 
 /**
  * Validate version compatibility.

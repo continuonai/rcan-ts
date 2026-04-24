@@ -1,3 +1,29 @@
+## [3.4.1] — 2026-04-23
+
+### Fixed
+
+- **CJS require path** — `tsup.config.ts` now forces the CJS build to emit
+  `dist/index.cjs` (matching the `package.json` `main` + `exports.require`
+  fields). Prior releases (including 3.4.0 and 3.3.0) emitted `dist/index.js`
+  instead, causing `require('rcan-ts')` to fail with `MODULE_NOT_FOUND`. ESM
+  (`import`) consumers were unaffected.
+- **`normalizeAgent` null-runtimes parity with rcan-py** — `agent.runtimes`
+  guards now use `!= null` (covers both `null` and `undefined`) instead of
+  `!== undefined`. A YAML manifest with `runtimes:` (empty value → `null`)
+  now correctly falls through instead of throwing `"agent.runtimes must be
+  an array"`. Matches rcan-py's `if runtimes is not None`.
+
+### Tests
+
+- Added 1 test for `{ runtimes: null }` normalization — ensures null is
+  treated as absence (matches rcan-py). Total rcan-ts manifest tests: 19.
+
+### Parity
+
+- rcan-py 3.3.0 ⇔ rcan-spec v3.2 ⇔ rcan-ts 3.4.1.
+
+---
+
 ## [3.4.0] — 2026-04-23
 
 ### Added

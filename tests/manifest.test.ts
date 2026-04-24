@@ -193,6 +193,23 @@ describe("normalizeAgent", () => {
       /both flat.*and runtimes/,
     );
   });
+
+  test("runtimes: null (YAML empty value) treated as no runtimes — parity with rcan-py", () => {
+    // YAML `runtimes:` with no value parses to null. rcan-py's
+    // `if runtimes is not None` falls through; rcan-ts must match.
+    expect(normalizeAgent({ runtimes: null } as unknown as Record<string, unknown>)).toBeNull();
+
+    // And when null runtimes coexists with flat form, the flat form still wraps.
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const out = normalizeAgent({
+      runtimes: null,
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+    } as unknown as Record<string, unknown>);
+    expect(out).toHaveLength(1);
+    expect(out?.[0]?.id).toBe("robot-md");
+    warnSpy.mockRestore();
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────

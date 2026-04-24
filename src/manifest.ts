@@ -98,14 +98,14 @@ export function normalizeAgent(
   const runtimes = (agent as Record<string, unknown>).runtimes;
   const hasFlat = "provider" in agent || "model" in agent;
 
-  if (runtimes !== undefined && hasFlat) {
+  if (runtimes != null && hasFlat) {
     throw new Error(
       "agent block declares both flat 'provider'/'model' and runtimes[] — " +
         "use one or the other. Flat form is deprecated; prefer runtimes[].",
     );
   }
 
-  if (runtimes !== undefined) {
+  if (runtimes != null) {
     if (!Array.isArray(runtimes)) {
       throw new Error("agent.runtimes must be an array");
     }

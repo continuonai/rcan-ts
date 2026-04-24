@@ -2,6 +2,8 @@ import { defineConfig } from "tsup";
 
 export default defineConfig([
   // Node.js / server build (CJS + ESM)
+  // package.json exports map declares ./dist/index.cjs and ./dist/index.mjs,
+  // so force CJS output to .cjs (tsup default is .js which breaks CJS require).
   {
     entry: ["src/index.ts"],
     format: ["cjs", "esm"],
@@ -12,6 +14,9 @@ export default defineConfig([
     platform: "node",
     target: "node18",
     external: ["node:crypto"],
+    outExtension: ({ format }) => ({
+      js: format === "cjs" ? ".cjs" : ".mjs",
+    }),
   },
   // CLI binary — rcan-validate
   {
