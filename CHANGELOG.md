@@ -1,3 +1,30 @@
+## [3.2.0] — 2026-04-23
+
+### Added
+
+- **4 §22-26 compliance builders** (new, ported from rcan-py 3.1.1):
+  - `buildSafetyBenchmark(opts)` → `SafetyBenchmark` envelope (§23)
+  - `buildIfu(opts)` → `InstructionsForUse` envelope (§24, EU AI Act Art. 13(3))
+  - `buildIncidentReport(opts)` → `PostMarketIncidentReport` (§25, Art. 72) — auto-computes `total_incidents` + `incidents_by_severity`; unknown severities silently ignored
+  - `buildEuRegisterEntry(opts)` → `EuRegisterEntry` (§26, Art. 49) — defaults `conformity_status` and `submission_instructions` from re-exported constants
+- **10 new constants** re-exported: `SAFETY_BENCHMARK_SCHEMA`, `IFU_SCHEMA`, `INCIDENT_REPORT_SCHEMA`, `EU_REGISTER_SCHEMA`, `ART13_COVERAGE`, `VALID_SEVERITIES`, `REPORTING_DEADLINES`, `ART72_NOTE`, `CONFORMITY_STATUS_DECLARED`, `SUBMISSION_INSTRUCTIONS`.
+
+### Changed (internal — no shipping TS consumers affected)
+
+- Rewrote `§23 SafetyBenchmark`, `§24 InstructionsForUse`, `§25 PostMarketIncidentReport` (renamed from `PostMarketIncident`), `§26 EuRegisterEntry` type interfaces in `src/compliance.ts` to match the rcan-py 3.1.1 wire format. Byte parity enforced via `rcan-spec/fixtures/compliance-v1.json` (bundled at `tests/fixtures/`).
+- `IncidentSeverity` tightened to `"life_health" | "other"` (EU AI Act Art. 72 serious-incident categories per rcan-py `VALID_SEVERITIES`).
+- §22 `FriaDocument`, `FriaSigningKey`, `FriaConformance` types unchanged.
+
+### Removed
+
+- Defunct type unions `IncidentStatus` and `EuComplianceStatus` — no rcan-py counterpart and no known consumers.
+
+### Cross-language parity
+
+Byte-identical builder output to rcan-py 3.1.1 for all 8 fixture cases (3 minimal, 3 populated, 1 unicode, 1 unknown-severity-ignoring) per `tests/fixtures/compliance-v1.json`.
+
+---
+
 ## [3.1.1] — 2026-04-23
 
 ### Fixed
