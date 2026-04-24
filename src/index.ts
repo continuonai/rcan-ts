@@ -280,16 +280,35 @@ export { validateV22DelegationChain, verifyV22MediaChunkHash } from './delegatio
 
 export { computeWatermarkToken, verifyTokenFormat, verifyViaApi } from "./watermark.js";
 
-// ── v3.0: Compliance schema types (§22–§26) ──────────────────────────────────
-export type {
-  FriaSigningKey,
-  FriaConformance,
-  FriaDocument,
-  SafetyBenchmark,
-  InstructionsForUse,
-  PostMarketIncidentReport,
-  EuRegisterEntry,
-  IncidentSeverity,
+// ── v3.0: Compliance schema types + builders + constants (§22–§26) ───────────
+export {
+  // §22 FRIA types
+  type FriaSigningKey,
+  type FriaConformance,
+  type FriaDocument,
+  // §23-26 wire-format types
+  type SafetyBenchmark,
+  type InstructionsForUse,
+  type IncidentSeverity,
+  type PostMarketIncidentReport,
+  type EuRegisterEntry,
+  // §23-26 schema identifiers
+  SAFETY_BENCHMARK_SCHEMA,
+  IFU_SCHEMA,
+  INCIDENT_REPORT_SCHEMA,
+  EU_REGISTER_SCHEMA,
+  // §23-26 spec-domain constants
+  ART13_COVERAGE,
+  VALID_SEVERITIES,
+  REPORTING_DEADLINES,
+  ART72_NOTE,
+  CONFORMITY_STATUS_DECLARED,
+  SUBMISSION_INSTRUCTIONS,
+  // §23-26 builders
+  buildSafetyBenchmark,
+  buildIfu,
+  buildIncidentReport,
+  buildEuRegisterEntry,
 } from './compliance.js';
 
 // ── v3.0: RegistryRegisterPayload + makeRegistryRegister ─────────────────────
