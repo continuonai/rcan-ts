@@ -145,6 +145,7 @@ describe("buildIncidentReport", () => {
 
 describe("buildEuRegisterEntry", () => {
   const minInput = {
+    rmn: "RMN-000000000007",
     fria_ref: "fria.json",
     provider: { name: "craigm26" },
     system: { rrn: "RRN-000000000001" },
@@ -154,6 +155,10 @@ describe("buildEuRegisterEntry", () => {
 
   test("output includes schema === EU_REGISTER_SCHEMA", () => {
     expect(buildEuRegisterEntry(minInput).schema).toBe(EU_REGISTER_SCHEMA);
+  });
+
+  test("output carries top-level rmn", () => {
+    expect(buildEuRegisterEntry(minInput).rmn).toBe("RMN-000000000007");
   });
 
   test("uses CONFORMITY_STATUS_DECLARED when conformity_status is omitted", () => {

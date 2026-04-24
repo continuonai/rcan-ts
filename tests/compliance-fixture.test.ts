@@ -55,9 +55,9 @@ const builders: Record<string, (opts: Record<string, unknown>) => Record<string,
 };
 
 describe("compliance-v1 cross-language byte parity", () => {
-  test("fixture loads and has 8 cases for rcan-py 3.1.1", () => {
+  test("fixture loads and has 8 cases for rcan-py 3.2.0", () => {
     expect(fixture.format).toBe("rcan-compliance-fixture-v1");
-    expect(fixture.rcan_py_version).toBe("3.1.1");
+    expect(fixture.rcan_py_version).toBe("3.2.0");
     expect(fixture.cases).toHaveLength(8);
   });
 

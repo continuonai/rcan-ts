@@ -130,11 +130,15 @@ export interface EuRegisterEntry {
   readonly schema: string;
   /** ISO-8601 timestamp of entry generation. */
   readonly generated_at: string;
+  /** Robot Model Number — the model being registered under Art. 49.
+   *  Format: `RMN-XXXXXXXXXXXX`. Required as of rcan-spec v3.1. */
+  readonly rmn: string;
   /** Basename of the signed rcan-fria-v1 JSON attached. */
   readonly fria_ref: string;
   /** Provider block — `{ name, contact, ... }`. */
   readonly provider: Record<string, unknown>;
-  /** System block — `{ rrn, rrn_uri, robot_name, rcan_version, opencastor_version, ... }`. */
+  /** System block — `{ rrn, rrn_uri, robot_name, rcan_version, opencastor_version, ... }`.
+   *  Per rcan-spec v3.1: `system.rrn` is per-submission provenance only; routing happens via top-level `rmn`. */
   readonly system: Record<string, unknown>;
   /** The Annex III high-risk category string. */
   readonly annex_iii_basis: string;
@@ -306,11 +310,18 @@ export function buildIncidentReport(opts: {
 /**
  * Build a §26 rcan-eu-register-v1 envelope (EU AI Act Art. 49).
  *
+ * Art. 49 registration is scoped per AI system (per model), not per
+ * individual robot. `rmn` identifies the model being registered;
+ * `system.rrn` records which specific robot produced the submission
+ * (provenance only).
+ *
  * `conformity_status` defaults to `CONFORMITY_STATUS_DECLARED` ("declared")
  * and `submission_instructions` defaults to `SUBMISSION_INSTRUCTIONS` when
  * omitted or `undefined`.
  */
 export function buildEuRegisterEntry(opts: {
+  /** Robot Model Number — the model registered under Art. 49. Required as of rcan-spec v3.1. */
+  rmn: string;
   fria_ref: string;
   provider: Record<string, unknown>;
   system: Record<string, unknown>;
@@ -322,6 +333,7 @@ export function buildEuRegisterEntry(opts: {
   return {
     schema: EU_REGISTER_SCHEMA,
     generated_at: opts.generated_at,
+    rmn: opts.rmn,
     fria_ref: opts.fria_ref,
     provider: opts.provider,
     system: opts.system,

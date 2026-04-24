@@ -1,3 +1,33 @@
+## [3.3.0] — 2026-04-24
+
+### Changed (breaking for §26 callers)
+
+- `buildEuRegisterEntry` now requires `rmn: string` as a keyword argument.
+  rcan-spec v3.1 adds a required top-level `rmn` (Robot Model Number) field
+  to the `rcan-eu-register-v1` envelope so Art. 49 registrations can be
+  routed per-model. `system.rrn` remains for per-submission provenance.
+- `EuRegisterEntry` interface: added `readonly rmn: string`.
+- `system` field docstring updated to clarify that `system.rrn` is
+  provenance only; routing is via top-level `rmn`.
+
+### Byte-parity
+
+- Matches rcan-py 3.2.0. Bundled fixture at `tests/fixtures/compliance-v1.json`
+  regenerated against rcan-py 3.2.0 (authoritative source:
+  rcan-spec v3.1 fixture). The six non-§26 cases are byte-identical to
+  the 3.1.1 output; two eu_register cases updated with `rmn`.
+
+### Compatibility
+
+- §26 was introduced in rcan-spec v3.0 13 days ago as Experimental tier
+  with zero production consumers at bump time. Per rcan-spec
+  VERSIONING.md, breaking MINOR changes are permitted in Experimental tier
+  with release notice. No migration shim is provided; direct §26 callers
+  must update call sites.
+- rcan-py 3.2.0 ⇔ rcan-spec v3.1 ⇔ rcan-ts 3.3.0.
+
+---
+
 ## [3.2.0] — 2026-04-23
 
 ### Added
