@@ -10,8 +10,8 @@ export { RobotURI, RobotURIError } from "./address.js";
 export type { RobotURIOptions } from "./address.js";
 
 // ROBOT.md cross-link — operator brings their own YAML parser.
-export { fromManifest } from "./manifest.js";
-export type { ManifestInfo } from "./manifest.js";
+export { fromManifest, normalizeAgent, validateAgentRuntimes } from "./manifest.js";
+export type { ManifestInfo, AgentRuntime, AgentRuntimesBlock } from "./manifest.js";
 
 export { RCANMessage, RCANMessageError, MessageType, makeCloudRelayMessage, addDelegationHop, validateDelegationChain } from "./message.js";
 export type { RCANMessageData, SignatureBlock, SenderType, DelegationHop } from "./message.js";
