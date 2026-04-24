@@ -65,6 +65,8 @@ export interface ManifestInfo {
   robotName: string | null;
   /** rcan_version (top-level). */
   rcanVersion: string | null;
+  /** Normalized agent.runtimes[] per rcan-spec v3.2 §8.6. Null if no agent block. */
+  agentRuntimes: AgentRuntime[] | null;
   /** The original frontmatter object — caller keeps reference for deeper fields. */
   frontmatter: Record<string, unknown>;
 }
@@ -231,6 +233,18 @@ export function fromManifest(
     rcanVersion = String(frontmatter.rcan_version);
   }
 
+  const agentRuntimes = normalizeAgent(
+    frontmatter.agent as Record<string, unknown> | null | undefined,
+  );
+  if (agentRuntimes !== null) {
+    const validationErrors = validateAgentRuntimes(agentRuntimes);
+    if (validationErrors.length > 0) {
+      throw new Error(
+        "agent.runtimes[] validation failed: " + validationErrors.join("; "),
+      );
+    }
+  }
+
   const publicResolver = rrn ? `https://rcan.dev/r/${rrn}` : null;
 
   return {
@@ -241,6 +255,7 @@ export function fromManifest(
     publicResolver,
     robotName,
     rcanVersion,
+    agentRuntimes,
     frontmatter,
   };
 }

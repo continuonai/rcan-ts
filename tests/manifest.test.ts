@@ -92,6 +92,45 @@ describe("fromManifest", () => {
     expect(info.rcanVersion).toBeNull();
     expect(info.frontmatter).toEqual({});
   });
+
+  test("populates agentRuntimes from structured agent.runtimes[]", () => {
+    const fm = {
+      ...BOB_FM,
+      agent: {
+        runtimes: [
+          {
+            id: "robot-md",
+            harness: "claude-code",
+            default: true,
+            models: [
+              { provider: "anthropic", model: "claude-sonnet-4-6", role: "primary" },
+            ],
+          },
+          { id: "opencastor", harness: "castor-default" },
+        ],
+      },
+    };
+    const info = fromManifest(fm);
+    expect(info.agentRuntimes).toHaveLength(2);
+    expect(info.agentRuntimes?.[0]?.id).toBe("robot-md");
+    expect(info.agentRuntimes?.[0]?.default).toBe(true);
+    expect(info.agentRuntimes?.[1]?.id).toBe("opencastor");
+  });
+
+  test("agentRuntimes is null when no agent block declared", () => {
+    const info = fromManifest(BOB_FM);
+    expect(info.agentRuntimes).toBeNull();
+  });
+
+  test("fromManifest raises on invalid agent.runtimes[] (missing harness)", () => {
+    const fm = {
+      ...BOB_FM,
+      agent: {
+        runtimes: [{ id: "robot-md" }], // missing harness
+      },
+    };
+    expect(() => fromManifest(fm)).toThrow(/harness/);
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
