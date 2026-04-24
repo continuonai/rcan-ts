@@ -143,3 +143,57 @@ export interface EuRegisterEntry {
   /** Defaults to the `SUBMISSION_INSTRUCTIONS` blurb unless overridden. */
   readonly submission_instructions: string;
 }
+
+// ═════════════════════════════════════════════════════════════════════
+// Schema identifiers + spec-domain constants
+//
+// Values copied from rcan-py 3.1.1 rcan/compliance.py. These MUST stay
+// byte-identical to rcan-py — the compliance-v1 fixture proves it.
+// ═════════════════════════════════════════════════════════════════════
+
+/** §23 schema identifier. */
+export const SAFETY_BENCHMARK_SCHEMA = "rcan-safety-benchmark-v1";
+/** §24 schema identifier. */
+export const IFU_SCHEMA = "rcan-ifu-v1";
+/** §25 schema identifier. */
+export const INCIDENT_REPORT_SCHEMA = "rcan-incidents-v1";
+/** §26 schema identifier. */
+export const EU_REGISTER_SCHEMA = "rcan-eu-register-v1";
+
+/**
+ * §24 Art. 13(3) — the 8 IFU sections EU AI Act mandates, in canonical order.
+ * buildIfu emits this list as the `art13_coverage` field.
+ */
+export const ART13_COVERAGE: readonly string[] = [
+  "provider_identity",
+  "intended_purpose",
+  "capabilities_and_limitations",
+  "accuracy_and_performance",
+  "human_oversight_measures",
+  "known_risks_and_misuse",
+  "expected_lifetime",
+  "maintenance_requirements",
+] as const;
+
+/** §25 Art. 72 — post-market incident severity categories. */
+export const VALID_SEVERITIES: readonly IncidentSeverity[] = ["life_health", "other"] as const;
+
+/** §25 Art. 72 — reporting deadlines per severity. */
+export const REPORTING_DEADLINES: Readonly<Record<string, string>> = {
+  life_health: "15 days from incident timestamp",
+  other: "90 days from incident timestamp",
+};
+
+/** §25 Art. 72 provider-obligation note embedded in every incident report. */
+export const ART72_NOTE: string =
+  "Providers must report serious incidents to the relevant national " +
+  "authority within the applicable deadline per EU AI Act Art. 72.";
+
+/** §26 Art. 49 default conformity status. */
+export const CONFORMITY_STATUS_DECLARED = "declared";
+
+/** §26 Art. 49 default submission instructions. */
+export const SUBMISSION_INSTRUCTIONS: string =
+  "Submit this package to the EU AI Act database at " +
+  "https://ec.europa.eu/digital-strategy/en/policies/european-ai-act. " +
+  "Include the referenced rcan-fria-v1 JSON as an attachment.";
