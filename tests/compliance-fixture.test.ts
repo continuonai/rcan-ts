@@ -12,9 +12,8 @@
  * has legitimately moved.
  */
 
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   buildSafetyBenchmark,
@@ -24,9 +23,11 @@ import {
   canonicalJson,
 } from "../src/index.js";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const fixturePath = resolve(here, "fixtures", "compliance-v1.json");
-const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+const _filename = fileURLToPath(import.meta.url);
+const _dirname = dirname(_filename);
+
+const FIXTURE_PATH = join(_dirname, "fixtures", "compliance-v1.json");
+const fixture = JSON.parse(readFileSync(FIXTURE_PATH, "utf-8"));
 
 type Case = {
   name: string;
@@ -36,6 +37,16 @@ type Case = {
   expected_bytes_base64: string;
 };
 
+function b64decode(s: string): Uint8Array {
+  return Uint8Array.from(Buffer.from(s, "base64"));
+}
+
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 const builders: Record<string, (opts: Record<string, unknown>) => Record<string, unknown>> = {
   build_safety_benchmark: buildSafetyBenchmark as never,
   build_ifu: buildIfu as never,
@@ -44,20 +55,25 @@ const builders: Record<string, (opts: Record<string, unknown>) => Record<string,
 };
 
 describe("compliance-v1 cross-language byte parity", () => {
-  it("fixture loads and has 8 cases for rcan-py 3.1.1", () => {
+  test("fixture loads and has 8 cases for rcan-py 3.1.1", () => {
     expect(fixture.format).toBe("rcan-compliance-fixture-v1");
     expect(fixture.rcan_py_version).toBe("3.1.1");
     expect(fixture.cases).toHaveLength(8);
   });
 
   for (const c of fixture.cases as Case[]) {
-    it(c.name, () => {
+    test(`case ${c.name}`, () => {
       const builder = builders[c.builder];
       expect(builder).toBeDefined();
       const output = builder(c.input);
       const actualBytes = canonicalJson(output);
-      const expectedBytes = new Uint8Array(Buffer.from(c.expected_bytes_base64, "base64"));
-      expect(actualBytes).toEqual(expectedBytes);
+      const expectedBytes = b64decode(c.expected_bytes_base64);
+      const ok = bytesEqual(actualBytes, expectedBytes);
+      if (!ok) {
+        console.error("EXPECTED:", new TextDecoder().decode(expectedBytes));
+        console.error("ACTUAL:  ", new TextDecoder().decode(actualBytes));
+      }
+      expect(ok).toBe(true);
     });
   }
 });
