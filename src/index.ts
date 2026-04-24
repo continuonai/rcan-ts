@@ -287,11 +287,9 @@ export type {
   FriaDocument,
   SafetyBenchmark,
   InstructionsForUse,
-  PostMarketIncident,
+  PostMarketIncidentReport,
   EuRegisterEntry,
   IncidentSeverity,
-  IncidentStatus,
-  EuComplianceStatus,
 } from './compliance.js';
 
 // ── v3.0: RegistryRegisterPayload + makeRegistryRegister ─────────────────────

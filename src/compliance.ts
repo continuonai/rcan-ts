@@ -51,91 +51,95 @@ export interface FriaDocument {
 
 // ── §23: Safety Benchmark Protocol ───────────────────────────────────────────
 
-/** Results of a standardized robot safety benchmark run. */
+/** Output of `buildSafetyBenchmark` — §23 rcan-safety-benchmark-v1 envelope. */
 export interface SafetyBenchmark {
-  /** Benchmark protocol identifier, e.g. "rcan-sbp-v1" */
-  readonly protocol: string;
-  /** Overall score, 0.0–1.0 */
-  readonly score: number;
-  /** Number of test cases that passed */
-  readonly pass_count: number;
-  /** Number of test cases that failed */
-  readonly fail_count: number;
-  /** ISO-8601 timestamp when the benchmark was run */
-  readonly run_at: string;
-  /** Robot Registration Number this result is for */
-  readonly rrn: string;
+  /** Schema identifier — always `SAFETY_BENCHMARK_SCHEMA` ("rcan-safety-benchmark-v1"). */
+  readonly schema: string;
+  /** ISO-8601 timestamp when the benchmark was generated. */
+  readonly generated_at: string;
+  /** Run mode, e.g. "synthetic" or "hardware". */
+  readonly mode: string;
+  /** Number of samples per path. */
+  readonly iterations: number;
+  /** Threshold map keyed by `{path}_p95_ms` (caller pre-names). */
+  readonly thresholds: Record<string, number>;
+  /** Path name → stats object ({ min_ms, mean_ms, p95_ms, p99_ms, max_ms, pass }). */
+  readonly results: Record<string, unknown>;
+  /** Whether every path passed its threshold. */
+  readonly overall_pass: boolean;
 }
 
 // ── §24: Instructions for Use ─────────────────────────────────────────────────
 
-/** Operator-facing instructions for safe robot deployment. */
+/** Output of `buildIfu` — §24 rcan-ifu-v1 envelope (EU AI Act Art. 13(3)). */
 export interface InstructionsForUse {
-  /** Robot Registration Number */
-  readonly rrn: string;
-  /** Human-readable robot name */
-  readonly robot_name: string;
-  /** Intended use description */
-  readonly intended_use: string;
-  /** Operating environment description */
-  readonly operating_environment: string;
-  /** List of use cases or conditions where the robot must NOT be deployed */
-  readonly contraindications: readonly string[];
-  /** Document version string */
-  readonly version: string;
-  /** ISO-8601 timestamp when these instructions were issued */
-  readonly issued_at: string;
+  /** Schema identifier — always `IFU_SCHEMA` ("rcan-ifu-v1"). */
+  readonly schema: string;
+  /** ISO-8601 timestamp of issuance. */
+  readonly generated_at: string;
+  /** The 8 Art. 13(3) section field names in canonical order. */
+  readonly art13_coverage: readonly string[];
+  /** Art. 13(3)(a) provider identity block. */
+  readonly provider_identity: Record<string, unknown>;
+  /** Art. 13(3)(b) intended purpose block. */
+  readonly intended_purpose: Record<string, unknown>;
+  /** Art. 13(3)(c) capabilities and limitations. */
+  readonly capabilities_and_limitations: Record<string, unknown>;
+  /** Art. 13(3)(d) accuracy and performance. */
+  readonly accuracy_and_performance: Record<string, unknown>;
+  /** Art. 13(3)(e) human oversight measures. */
+  readonly human_oversight_measures: Record<string, unknown>;
+  /** Art. 13(3)(f) known risks and misuse. */
+  readonly known_risks_and_misuse: Record<string, unknown>;
+  /** Art. 13(3)(g) expected lifetime. */
+  readonly expected_lifetime: Record<string, unknown>;
+  /** Art. 13(3)(h) maintenance requirements. */
+  readonly maintenance_requirements: Record<string, unknown>;
 }
 
 // ── §25: Post-Market Incident Monitoring ─────────────────────────────────────
 
-/** Severity level of a post-market incident. */
-export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
+/** EU AI Act Art. 72 serious-incident categories — used by §25 post-market reports. */
+export type IncidentSeverity = "life_health" | "other";
 
-/** Resolution status of a post-market incident. */
-export type IncidentStatus = 'open' | 'under_review' | 'resolved';
-
-/** A post-market safety or performance incident record. */
-export interface PostMarketIncident {
-  /** Robot Registration Number */
+/** Output of `buildIncidentReport` — §25 rcan-incidents-v1 envelope (EU AI Act Art. 72). */
+export interface PostMarketIncidentReport {
+  /** Schema identifier — always `INCIDENT_REPORT_SCHEMA` ("rcan-incidents-v1"). */
+  readonly schema: string;
+  /** ISO-8601 timestamp when the report was generated. */
+  readonly generated_at: string;
+  /** Robot Registration Number this report covers. */
   readonly rrn: string;
-  /** Unique incident identifier */
-  readonly incident_id: string;
-  /** Severity classification */
-  readonly severity: IncidentSeverity;
-  /** Human-readable incident description */
-  readonly description: string;
-  /** ISO-8601 timestamp when the incident occurred */
-  readonly occurred_at: string;
-  /** ISO-8601 timestamp when the incident was reported */
-  readonly reported_at: string;
-  /** Current resolution status */
-  readonly status: IncidentStatus;
+  /** `incidents.length` — auto-computed by the builder. */
+  readonly total_incidents: number;
+  /** `{ life_health: N, other: M }` — auto-computed. Unknown severities silently ignored. */
+  readonly incidents_by_severity: Record<IncidentSeverity, number>;
+  /** Per-severity reporting deadline strings from `REPORTING_DEADLINES`. */
+  readonly reporting_deadlines: Record<string, string>;
+  /** The Art. 72 provider-obligation note from `ART72_NOTE`. */
+  readonly art72_note: string;
+  /** The raw incident entries passed to the builder. */
+  readonly incidents: readonly Record<string, unknown>[];
 }
 
 // ── §26: EU Register Entry ───────────────────────────────────────────────────
 
-/** Compliance status of a robot in the EU register. */
-export type EuComplianceStatus =
-  | 'compliant'
-  | 'provisional'
-  | 'non_compliant'
-  | 'no_fria';
-
-/** A robot's entry in the EU high-risk AI systems register. */
+/** Output of `buildEuRegisterEntry` — §26 rcan-eu-register-v1 envelope (EU AI Act Art. 49). */
 export interface EuRegisterEntry {
-  /** Robot Registration Number */
-  readonly rrn: string;
-  /** Human-readable robot name */
-  readonly robot_name: string;
-  /** Manufacturer identifier */
-  readonly manufacturer: string;
-  /** Annex III basis for high-risk classification */
+  /** Schema identifier — always `EU_REGISTER_SCHEMA` ("rcan-eu-register-v1"). */
+  readonly schema: string;
+  /** ISO-8601 timestamp of entry generation. */
+  readonly generated_at: string;
+  /** Basename of the signed rcan-fria-v1 JSON attached. */
+  readonly fria_ref: string;
+  /** Provider block — `{ name, contact, ... }`. */
+  readonly provider: Record<string, unknown>;
+  /** System block — `{ rrn, rrn_uri, robot_name, rcan_version, opencastor_version, ... }`. */
+  readonly system: Record<string, unknown>;
+  /** The Annex III high-risk category string. */
   readonly annex_iii_basis: string;
-  /** ISO-8601 timestamp when FRIA was submitted, or null if not yet submitted */
-  readonly fria_submitted_at: string | null;
-  /** Current compliance status */
-  readonly compliance_status: EuComplianceStatus;
-  /** ISO-8601 timestamp when the robot was registered */
-  readonly registered_at: string;
+  /** Defaults to `CONFORMITY_STATUS_DECLARED` ("declared") unless overridden. */
+  readonly conformity_status: string;
+  /** Defaults to the `SUBMISSION_INSTRUCTIONS` blurb unless overridden. */
+  readonly submission_instructions: string;
 }
