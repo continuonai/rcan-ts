@@ -50,6 +50,21 @@ export interface AgentRuntime {
  */
 export type AgentRuntimesBlock = AgentRuntime[] | null;
 
+/**
+ * Optional `voice:` block per rcan-spec v3.3 §8.7. All fields are optional;
+ * the block itself is optional. Held as a raw record because the schema is
+ * small and may evolve.
+ *
+ * @see rcan-py `ManifestInfo.voice` (parity)
+ */
+export interface VoiceBlock {
+  aliases?: string[];
+  language?: string;
+  tts_voice?: string;
+  /** Unknown fields preserved verbatim (host pass-through). */
+  [key: string]: unknown;
+}
+
 export interface ManifestInfo {
   /** RRN if the robot is registered, else null. */
   rrn: string | null;
@@ -67,6 +82,8 @@ export interface ManifestInfo {
   rcanVersion: string | null;
   /** Normalized agent.runtimes[] per rcan-spec v3.2 §8.6. Null if no agent block. */
   agentRuntimes: AgentRuntime[] | null;
+  /** Optional voice block per rcan-spec v3.3 §8.7. Null if absent. */
+  voice: VoiceBlock | null;
   /** The original frontmatter object — caller keeps reference for deeper fields. */
   frontmatter: Record<string, unknown>;
 }
@@ -186,6 +203,101 @@ export function validateAgentRuntimes(runtimes: AgentRuntime[]): string[] {
   return errors;
 }
 
+// Lightweight BCP-47 sanity — primary subtag (2-3 letters) + optional subtags.
+// Not a full RFC 5646 validator; the spec mandates soft validation.
+const BCP47_RE = /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/;
+
+/**
+ * Wake-word matching pre-image: NFKC + case-fold (lower-case here; JS lacks
+ * a true Unicode case-fold but `.toLowerCase()` matches Python's casefold for
+ * the alias domain — Latin letters and adjacent scripts).
+ *
+ * Hosts that adopt this block MUST normalize aliases AND the robot's `name`
+ * the same way before wake-word matching.
+ */
+export function normalizeAlias(s: string): string {
+  return s.normalize("NFKC").toLowerCase();
+}
+
+/**
+ * Soft-validate an optional `voice:` block per rcan-spec v3.3 §8.7.
+ *
+ * Returns an array of warning strings; empty array means clean. Never throws —
+ * voice is optional and host-advisory. Caller decides what to do with warnings
+ * (typically `console.warn` each).
+ *
+ * @see rcan-py `rcan.manifest._validate_voice_block` (parity)
+ */
+export function validateVoiceBlock(
+  voice: unknown,
+  robotName: string | null,
+): string[] {
+  const warns: string[] = [];
+  if (voice == null) return warns;
+  if (typeof voice !== "object" || Array.isArray(voice)) {
+    warns.push(`voice block is not a mapping (got ${typeof voice}); ignored`);
+    return warns;
+  }
+  const v = voice as Record<string, unknown>;
+
+  if (v.aliases !== undefined) {
+    if (!Array.isArray(v.aliases)) {
+      warns.push(`voice.aliases must be a list (got ${typeof v.aliases})`);
+    } else {
+      const seen = new Map<string, number>();
+      const normalizedName = robotName ? normalizeAlias(robotName) : null;
+      for (let i = 0; i < v.aliases.length; i++) {
+        const alias = v.aliases[i];
+        if (typeof alias !== "string") {
+          warns.push(
+            `voice.aliases[${i}] is not a string (got ${typeof alias})`,
+          );
+          continue;
+        }
+        const norm = normalizeAlias(alias);
+        if (normalizedName && norm === normalizedName) {
+          warns.push(
+            `voice.aliases[${i}]=${JSON.stringify(alias)} duplicates robot name ` +
+              `(already a wake word); consider removing`,
+          );
+        }
+        const prior = seen.get(norm);
+        if (prior !== undefined) {
+          warns.push(
+            `voice.aliases[${i}]=${JSON.stringify(alias)} NFKC-collapses to ` +
+              `voice.aliases[${prior}] — duplicate after normalization`,
+          );
+        } else {
+          seen.set(norm, i);
+        }
+      }
+    }
+  }
+
+  if (v.language !== undefined && v.language !== null) {
+    if (typeof v.language !== "string") {
+      warns.push(`voice.language must be a string (got ${typeof v.language})`);
+    } else if (!BCP47_RE.test(v.language)) {
+      warns.push(
+        `voice.language=${JSON.stringify(v.language)} does not match BCP-47 shape ` +
+          `(expected e.g. "en-US", "pt-BR"); using as-is`,
+      );
+    }
+  }
+
+  if (
+    v.tts_voice !== undefined &&
+    v.tts_voice !== null &&
+    typeof v.tts_voice !== "string"
+  ) {
+    warns.push(
+      `voice.tts_voice must be a string (got ${typeof v.tts_voice})`,
+    );
+  }
+
+  return warns;
+}
+
 /**
  * Extract RCAN-relevant fields from a parsed ROBOT.md frontmatter object.
  *
@@ -245,6 +357,15 @@ export function fromManifest(
     }
   }
 
+  const voiceRaw = frontmatter.voice;
+  for (const w of validateVoiceBlock(voiceRaw, robotName)) {
+    console.warn(`[rcan-ts] ${w}`);
+  }
+  const voice =
+    voiceRaw != null && typeof voiceRaw === "object" && !Array.isArray(voiceRaw)
+      ? (voiceRaw as VoiceBlock)
+      : null;
+
   const publicResolver = rrn ? `https://rcan.dev/r/${rrn}` : null;
 
   return {
@@ -256,6 +377,7 @@ export function fromManifest(
     robotName,
     rcanVersion,
     agentRuntimes,
+    voice,
     frontmatter,
   };
 }

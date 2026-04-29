@@ -275,3 +275,84 @@ describe("validateAgentRuntimes", () => {
     expect(errors).toEqual([]);
   });
 });
+
+
+// ----- v3.3 §8.7 voice block --------------------------------------------------
+
+import { validateVoiceBlock, normalizeAlias } from "../src/manifest.js";
+
+const VOICE_FM = {
+  rcan_version: "3.3",
+  metadata: { robot_name: "bob", rrn: "RRN-000000000003" },
+  voice: {
+    aliases: ["bobby", "hey-bob"],
+    language: "en-US",
+    tts_voice: "en_US-amy-low",
+  },
+};
+
+describe("voice block (rcan-spec v3.3 §8.7)", () => {
+  test("fromManifest populates ManifestInfo.voice", () => {
+    const info = fromManifest(VOICE_FM);
+    expect(info.voice).not.toBeNull();
+    expect(info.voice?.aliases).toEqual(["bobby", "hey-bob"]);
+    expect(info.voice?.language).toBe("en-US");
+    expect(info.voice?.tts_voice).toBe("en_US-amy-low");
+  });
+
+  test("absent voice block → voice is null", () => {
+    const info = fromManifest({ ...VOICE_FM, voice: undefined });
+    expect(info.voice).toBeNull();
+  });
+
+  test("voice scalar (not a mapping) → warning + voice is null", () => {
+    const warns = validateVoiceBlock("just a string", "bob");
+    expect(warns.some((w) => /not a mapping/.test(w))).toBe(true);
+  });
+
+  test("alias matching robot name (after NFKC + casefold) warns", () => {
+    const warns = validateVoiceBlock(
+      { aliases: ["BOB", "bobby"] },
+      "bob",
+    );
+    expect(warns.some((w) => /duplicates robot name/.test(w))).toBe(true);
+  });
+
+  test("NFKC-collapsed duplicate aliases warn", () => {
+    const warns = validateVoiceBlock(
+      { aliases: ["bobby", "BOBBY"] },
+      "bob",
+    );
+    expect(warns.some((w) => /NFKC-collapses/.test(w))).toBe(true);
+  });
+
+  test("malformed BCP-47 language warns (does not throw)", () => {
+    const warns = validateVoiceBlock(
+      { language: "123_not_a_lang!" },
+      "bob",
+    );
+    expect(warns.some((w) => /BCP-47/.test(w))).toBe(true);
+  });
+
+  test("aliases not a list → warning", () => {
+    const warns = validateVoiceBlock(
+      { aliases: "not-a-list" } as unknown,
+      "bob",
+    );
+    expect(warns.some((w) => /must be a list/.test(w))).toBe(true);
+  });
+
+  test("clean voice block produces no warnings", () => {
+    const warns = validateVoiceBlock(
+      { aliases: ["bobby"], language: "en-US", tts_voice: "amy" },
+      "bob",
+    );
+    expect(warns).toEqual([]);
+  });
+
+  test("normalizeAlias matches Python NFKC + casefold for ASCII", () => {
+    expect(normalizeAlias("BOB")).toBe("bob");
+    expect(normalizeAlias("Hey-Bob")).toBe("hey-bob");
+    expect(normalizeAlias("Café")).toBe("café");
+  });
+});
