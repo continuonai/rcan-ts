@@ -1,3 +1,22 @@
+## [3.4.2] — 2026-04-28
+
+### Added
+
+- `ManifestInfo.voice: VoiceBlock | null` — parses the optional `voice:`
+  block from rcan-spec v3.3 §8.7. TS-side parity with rcan-py 3.3.3.
+- `VoiceBlock` interface (aliases?, language?, tts_voice?) with index
+  signature for unknown-key pass-through.
+- `validateVoiceBlock(voice, robotName): string[]` — soft validation per
+  spec; returns warning strings (empty when clean), never throws. Caller
+  decides what to do; `fromManifest` emits each warning via `console.warn`.
+- `normalizeAlias(s)` — wake-word matching pre-image (NFKC + lowercase).
+
+### Notes
+
+- Spec version unchanged. SDK 3.4.1 → 3.4.2.
+- Wire-format unchanged. `voice:` does NOT participate in any RCAN
+  canonical pre-image, RRN derivation, or §22-26 compliance artifact.
+
 ## [3.4.1] — 2026-04-23
 
 ### Fixed
