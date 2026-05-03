@@ -1,9 +1,9 @@
 # rcan-ts
 
-**TypeScript SDK for the [RCAN protocol](https://rcan.dev/spec/) v3.0.** Build robots that communicate securely, audit every action, and enforce safety gates — in Node.js or the browser.
+**TypeScript SDK for the [RCAN protocol](https://rcan.dev/spec/).** Build robots that communicate securely, audit every action, and enforce safety gates — in Node.js or the browser. Pinned protocol version: see the [live compatibility matrix](https://rcan.dev/compatibility).
 
 [![npm version](https://img.shields.io/npm/v/rcan-ts.svg)](https://www.npmjs.com/package/rcan-ts)
-[![RCAN Spec](https://img.shields.io/badge/RCAN-v3.0-blue)](https://rcan.dev/spec/)
+[![RCAN Spec](https://img.shields.io/badge/RCAN-live%20matrix-blue)](https://rcan.dev/compatibility)
 [![CI](https://github.com/continuonai/rcan-ts/actions/workflows/ci.yml/badge.svg)](https://github.com/continuonai/rcan-ts/actions)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Node](https://img.shields.io/badge/node-18%2B-green)](https://nodejs.org)
@@ -150,7 +150,7 @@ console.log(node.operator);  // "Boston Dynamics, Inc."
 
 ## Spec Compliance
 
-Implements [RCAN v1.6](https://rcan.dev/spec/) — 405 tests, 0 skipped.
+Implements [the RCAN protocol](https://rcan.dev/compatibility) — 405 tests, 0 skipped. See the [live compatibility matrix](https://rcan.dev/compatibility) for the pinned version this SDK targets.
 
 API surface is intentionally identical to rcan-py: `RobotURI`, `RCANMessage`, `ConfidenceGate`, `HiTLGate`, `AuditChain`, and `validateConfig` work the same way in both languages.
 
